@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
+    <meta name="theme-color" content="#04080a" />
+    <meta name="description" content="Boîte à Idées — Mat" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="IDEA_BOX" />
+    <link rel="manifest" href="%PUBLIC_URL%/manifest.json" />
+    <title>IDEA_BOX · MAT</title>
+    <style>
+      body { margin: 0; background: #04080a; }
+      * { box-sizing: border-box; }
+    </style>
+  </head>
+  <body>
+    <noscript>Cette application nécessite JavaScript.</noscript>
+    <div id="root"></div>
+  </body>
+</html>
