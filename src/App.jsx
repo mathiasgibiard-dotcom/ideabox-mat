@@ -196,9 +196,18 @@ export default function App() {
   var editingId = editingIdState[0];
   var setEditingId = editingIdState[1];
 
+  var filesState = useState({});
+  var ideaFiles = filesState[0];
+  var setIdeaFiles = filesState[1];
+
+  var uploadingState = useState(false);
+  var isUploading = uploadingState[0];
+  var setIsUploading = uploadingState[1];
+
   var recognitionRef = useRef(null);
   var inputRef = useRef(null);
   var editRef = useRef(null);
+  var fileInputRef = useRef(null);
 
   useEffect(function() {
     var t = setInterval(function() { setTime(new Date().toLocaleTimeString("fr-FR")); }, 1000);
@@ -207,6 +216,12 @@ export default function App() {
   }, []);
 
   useEffect(function() { loadIdeas(); }, []); // eslint-disable-line
+
+  useEffect(function() {
+    if (screen === "idea_detail" && activeIdea) {
+      loadFiles(activeIdea.id);
+    }
+  }, [screen, activeIdea]); // eslint-disable-line
 
   useEffect(function() {
     if (screen === "input" && inputRef.current) {
@@ -366,6 +381,66 @@ export default function App() {
       setCopiedId(idea.id); showToast("Prompt copie !");
       setTimeout(function() { setCopiedId(null); }, 2500);
     });
+  }
+
+  function loadFiles(ideaId) {
+    fetch(SUPABASE_URL + "/storage/v1/object/list/idea-files", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": "Bearer " + SUPABASE_KEY },
+      body: JSON.stringify({ prefix: ideaId + "/", limit: 50 }),
+    }).then(function(r) { return r.json(); }).then(function(data) {
+      if (Array.isArray(data)) {
+        setIdeaFiles(function(prev) { return Object.assign({}, prev, { [ideaId]: data }); });
+      }
+    }).catch(function() {});
+  }
+
+  function uploadFile(ideaId, file) {
+    setIsUploading(true);
+    var path = ideaId + "/" + Date.now() + "_" + file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
+    fetch(SUPABASE_URL + "/storage/v1/object/idea-files/" + path, {
+      method: "POST",
+      headers: { "apikey": SUPABASE_KEY, "Authorization": "Bearer " + SUPABASE_KEY, "Content-Type": file.type || "application/octet-stream" },
+      body: file,
+    }).then(function(r) { return r.json(); }).then(function() {
+      setIsUploading(false);
+      showToast("Fichier ajoute !");
+      loadFiles(ideaId);
+    }).catch(function() {
+      setIsUploading(false);
+      showToast("Erreur upload", "err");
+    });
+  }
+
+  function deleteFile(ideaId, fileName) {
+    fetch(SUPABASE_URL + "/storage/v1/object/idea-files/" + ideaId + "/" + fileName, {
+      method: "DELETE",
+      headers: { "apikey": SUPABASE_KEY, "Authorization": "Bearer " + SUPABASE_KEY },
+    }).then(function() {
+      showToast("Fichier supprime");
+      loadFiles(ideaId);
+    }).catch(function() { showToast("Erreur suppression", "err"); });
+  }
+
+  function getFileUrl(ideaId, fileName) {
+    return SUPABASE_URL + "/storage/v1/object/public/idea-files/" + ideaId + "/" + fileName;
+  }
+
+  function getFileIcon(name) {
+    var ext = (name || "").split(".").pop().toLowerCase();
+    if (["jpg","jpeg","png","gif","webp","svg"].includes(ext)) return "🖼";
+    if (["pdf"].includes(ext)) return "📄";
+    if (["mp4","mov","avi","mkv"].includes(ext)) return "🎬";
+    if (["mp3","wav","ogg"].includes(ext)) return "🎵";
+    if (["zip","rar","7z"].includes(ext)) return "📦";
+    if (["doc","docx","txt","md"].includes(ext)) return "📝";
+    if (["xls","xlsx","csv"].includes(ext)) return "📊";
+    return "📎";
+  }
+
+  function isImage(name) {
+    var ext = (name || "").split(".").pop().toLowerCase();
+    return ["jpg","jpeg","png","gif","webp","svg"].includes(ext);
   }
 
   var syncDot = { ok: "#00ff88", syncing: "#ffe600", err: "#ff4466", idle: "#334433" }[syncStatus] || "#334433";
@@ -592,6 +667,44 @@ export default function App() {
                 return <button key={fl.id} onClick={function() { updateIdea(idea.id, { folder: fl.label, folder_color: fl.color }); }} style={{ background: "transparent", border: "1px solid " + fl.color + "33", borderRadius: "3px", color: fl.color + "99", padding: "5px 10px", cursor: "pointer", fontSize: "10px", transition: "all 0.15s" }}>{fl.icon} {fl.label}</button>;
               })}
             </div>
+          </div>
+
+          {/* Fichiers */}
+          <div style={{ background: "rgba(2,14,8,0.9)", border: "1px solid #00ff8815", borderRadius: "6px", padding: "14px", marginBottom: "12px" }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "10px" }}>
+              <div style={{ fontSize: "10px", color: "#88bbaa", letterSpacing: "0.15em" }}>📎 FICHIERS JOINTS</div>
+              <button onClick={function() { if (fileInputRef.current) fileInputRef.current.click(); }} disabled={isUploading} style={{ background: isUploading ? "transparent" : fc + "12", border: "1px solid " + fc + "44", borderRadius: "3px", color: isUploading ? "#88bbaa" : fc, padding: "4px 12px", cursor: isUploading ? "not-allowed" : "pointer", fontSize: "10px", fontWeight: "700", letterSpacing: "0.06em" }}>
+                {isUploading ? "UPLOAD..." : "+ AJOUTER"}
+              </button>
+              <input ref={fileInputRef} type="file" multiple accept="*/*" style={{ display: "none" }} onChange={function(e) { var files = Array.from(e.target.files); files.forEach(function(f) { uploadFile(idea.id, f); }); e.target.value = ""; }}/>
+            </div>
+            {(ideaFiles[idea.id] || []).length === 0 ? (
+              <div style={{ textAlign: "center", padding: "16px 0", fontSize: "11px", color: "#334433", letterSpacing: "0.1em" }}>AUCUN FICHIER</div>
+            ) : (
+              <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                {(ideaFiles[idea.id] || []).map(function(file) {
+                  var rawName = file.name || "";
+                  var displayName = rawName.replace(/^\d+_/, "");
+                  var url = getFileUrl(idea.id, rawName);
+                  return (
+                    <div key={rawName} style={{ display: "flex", alignItems: "center", gap: "8px", background: "rgba(0,255,136,0.03)", border: "1px solid #00ff8812", borderRadius: "4px", padding: "8px 10px" }}>
+                      {isImage(rawName) ? (
+                        <a href={url} target="_blank" rel="noreferrer" style={{ flexShrink: 0 }}>
+                          <img src={url} alt={displayName} style={{ width: "38px", height: "38px", objectFit: "cover", borderRadius: "3px", border: "1px solid #00ff8822" }}/>
+                        </a>
+                      ) : (
+                        <span style={{ fontSize: "20px", flexShrink: 0 }}>{getFileIcon(rawName)}</span>
+                      )}
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <a href={url} target="_blank" rel="noreferrer" style={{ color: "#aaccbb", fontSize: "11px", textDecoration: "none", display: "block", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{displayName}</a>
+                        <div style={{ fontSize: "9px", color: "#445544", marginTop: "2px" }}>{file.metadata && file.metadata.size ? (file.metadata.size / 1024).toFixed(0) + " Ko" : ""}</div>
+                      </div>
+                      <button onClick={function() { deleteFile(idea.id, rawName); }} style={{ background: "transparent", border: "1px solid #ff446633", borderRadius: "3px", color: "#ff6677", padding: "4px 8px", cursor: "pointer", fontSize: "11px", flexShrink: 0 }}>🗑</button>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
 
           {/* Idee originale */}
