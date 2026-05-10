@@ -208,6 +208,14 @@ export default function App() {
   var pendingFiles = pendingFilesState[0];
   var setPendingFiles = pendingFilesState[1];
 
+  var previewState = useState(null);
+  var previewHtml = previewState[0];
+  var setPreviewHtml = previewState[1];
+
+  var genPreviewState = useState(false);
+  var isGeneratingPreview = genPreviewState[0];
+  var setIsGeneratingPreview = genPreviewState[1];
+
   var recognitionRef = useRef(null);
   var inputRef = useRef(null);
   var editRef = useRef(null);
@@ -389,6 +397,27 @@ export default function App() {
     navigator.clipboard.writeText(idea.prompt || "").then(function() {
       setCopiedId(idea.id); showToast("Prompt copie !");
       setTimeout(function() { setCopiedId(null); }, 2500);
+    });
+  }
+
+  function generatePreview(idea) {
+    setIsGeneratingPreview(true);
+    setPreviewHtml("loading");
+    var systemPrompt = "Tu es un expert UI/UX. Genere un mockup HTML/CSS complet et autonome d'une interface d'application basee sur la description fournie. REGLES STRICTES : reponds UNIQUEMENT avec du code HTML pur (commence par <!DOCTYPE html>), aucun texte avant ou apres, aucun markdown, aucun backtick. Le HTML doit etre autonome (CSS inline ou dans <style>), realiste, visuellement impressionnant, style moderne sombre. Inclus de fausses donnees pour rendre le mockup vivant. Taille ciblee : mobile 375px de large.";
+    var userMsg = "Titre : " + idea.titre + "\nConcept : " + idea.concept + "\nFonctionnalites : " + (idea.fonctionnalites || []).join(", ") + "\nType : " + idea.folder + "\n\nGenere un mockup HTML de l'interface principale de cette app.";
+    fetch("/api/claude", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ model: "claude-opus-4-7", max_tokens: 4000, system: systemPrompt, messages: [{ role: "user", content: userMsg }] }),
+    }).then(function(r) { return r.json(); }).then(function(data) {
+      var html = data.content && data.content[0] ? data.content[0].text : "";
+      html = html.replace(/```html/gi, "").replace(/```/g, "").trim();
+      setPreviewHtml(html);
+      setIsGeneratingPreview(false);
+    }).catch(function() {
+      showToast("Erreur generation apercu", "err");
+      setIsGeneratingPreview(false);
+      setPreviewHtml(null);
     });
   }
 
@@ -710,6 +739,9 @@ export default function App() {
               }} style={{ width: "100%", background: "rgba(255,165,0,0.08)", border: "1px solid rgba(255,165,0,0.4)", borderRadius: "4px", color: "#ffaa44", padding: "10px", cursor: "pointer", fontSize: "12px", fontWeight: "700", letterSpacing: "0.08em", textShadow: "0 0 10px #ffaa4466", transition: "all 0.2s" }}>
                 Naviguer MODE GUIDE — CREATION ETAPE PAR ETAPE
               </button>
+              <button onClick={function() { generatePreview(idea); }} disabled={isGeneratingPreview} style={{ width: "100%", marginTop: "8px", background: isGeneratingPreview ? "transparent" : "rgba(180,0,255,0.08)", border: "1px solid " + (isGeneratingPreview ? "#55335588" : "rgba(180,0,255,0.4)"), borderRadius: "4px", color: isGeneratingPreview ? "#88bbaa" : "#cc88ff", padding: "10px", cursor: isGeneratingPreview ? "not-allowed" : "pointer", fontSize: "12px", fontWeight: "700", letterSpacing: "0.08em", textShadow: isGeneratingPreview ? "none" : "0 0 10px #cc88ff66", transition: "all 0.2s" }}>
+                {isGeneratingPreview ? "GENERATION APERCU..." : "🖥 VISUALISER L'INTERFACE"}
+              </button>
             </div>
           )}
 
@@ -754,6 +786,44 @@ export default function App() {
             )}
           </div>
         </div>
+
+        {/* Modal Apercu Visuel */}
+        {previewHtml && (
+          <div style={{ position: "fixed", inset: 0, zIndex: 200, background: "rgba(2,8,4,0.97)", display: "flex", flexDirection: "column" }}>
+            <div style={{ background: "rgba(3,10,5,0.99)", borderBottom: "1px solid #cc88ff33", padding: "12px 16px", display: "flex", alignItems: "center", justifyContent: "space-between", flexShrink: 0 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                <span style={{ fontSize: "14px", color: "#cc88ff", fontWeight: "700", letterSpacing: "0.1em", textShadow: "0 0 14px #cc88ff" }}>🖥 APERCU INTERFACE</span>
+                <span style={{ fontSize: "10px", color: "#88bbaa", letterSpacing: "0.08em" }}>{idea.titre}</span>
+              </div>
+              <div style={{ display: "flex", gap: "8px" }}>
+                <button onClick={function() { generatePreview(idea); }} disabled={isGeneratingPreview} style={{ background: "transparent", border: "1px solid #cc88ff44", borderRadius: "4px", color: "#cc88ff88", padding: "6px 12px", cursor: "pointer", fontSize: "10px", letterSpacing: "0.06em" }}>
+                  {isGeneratingPreview ? "..." : "⟳ REGENERER"}
+                </button>
+                <button onClick={function() { setPreviewHtml(null); }} style={{ background: "transparent", border: "1px solid #ff446644", borderRadius: "4px", color: "#ff8899", padding: "6px 12px", cursor: "pointer", fontSize: "12px" }}>✕ FERMER</button>
+              </div>
+            </div>
+            <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", padding: "20px", overflow: "hidden" }}>
+              {previewHtml === "loading" ? (
+                <div style={{ textAlign: "center" }}>
+                  <div style={{ fontSize: "32px", marginBottom: "16px", animation: "pulse 1.2s infinite" }}>🖥</div>
+                  <div style={{ fontSize: "12px", color: "#cc88ff", letterSpacing: "0.15em", animation: "pulse 1.2s infinite" }}>GENERATION DE L'APERCU...</div>
+                  <div style={{ fontSize: "10px", color: "#556655", marginTop: "8px" }}>Claude analyse l'idee et construit l'interface</div>
+                </div>
+              ) : (
+                <div style={{ width: "375px", height: "100%", maxHeight: "720px", borderRadius: "24px", overflow: "hidden", border: "1px solid #cc88ff33", boxShadow: "0 0 60px #cc88ff22, 0 0 120px #cc88ff0a" }}>
+                  <div style={{ background: "#1a1a1a", padding: "8px 16px", display: "flex", alignItems: "center", gap: "6px", borderBottom: "1px solid #33333388" }}>
+                    <div style={{ width: "8px", height: "8px", borderRadius: "50%", background: "#ff5f57" }}/>
+                    <div style={{ width: "8px", height: "8px", borderRadius: "50%", background: "#ffbd2e" }}/>
+                    <div style={{ width: "8px", height: "8px", borderRadius: "50%", background: "#28c840" }}/>
+                    <span style={{ flex: 1, textAlign: "center", fontSize: "10px", color: "#666", letterSpacing: "0.06em" }}>{idea.titre}</span>
+                  </div>
+                  <iframe srcDoc={previewHtml} style={{ width: "100%", height: "calc(100% - 32px)", border: "none", background: "#fff" }} sandbox="allow-scripts" title="apercu"/>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
         {toast && <Toast toast={toast}/>}<Styles/>
       </div>
     );
