@@ -367,6 +367,37 @@ export default function App() {
     });
   }
 
+  function saveRawIdea() {
+    if (!rawInput.trim()) return;
+    var folder = selectedFolder || FOLDERS[0];
+    var idea = {
+      id: Date.now(),
+      raw: rawInput,
+      titre: rawInput.length > 30 ? rawInput.substring(0, 30) + "..." : rawInput,
+      concept: "",
+      fonctionnalites: [],
+      folder: folder.label,
+      folderColor: folder.color,
+      status: "idee",
+      priority: "moyenne",
+      tags: [],
+      prompt: "",
+      date: new Date().toLocaleDateString("fr-FR"),
+      ts: Date.now(),
+    };
+    insertIdea(idea).then(function(saved) {
+      var finalIdea = saved || idea;
+      var uploads = pendingFiles.map(function(f) { return uploadFile(finalIdea.id, f); });
+      Promise.all(uploads).then(function() { setPendingFiles([]); });
+      setRawInput("");
+      setActiveIdea(finalIdea);
+      setScreen("idea_detail");
+      showToast("Idee sauvegardee — enrichis-la quand tu veux !");
+    }).catch(function() {
+      showToast("Erreur sauvegarde", "err");
+    });
+  }
+
   function regenerateIdea(idea) {
     if (!editText.trim()) return;
     var folderId = (FOLDERS.find(function(f) { return f.label === idea.folder; }) || { id: "libre" }).id;
@@ -606,6 +637,9 @@ export default function App() {
             <div style={{ display: "flex", gap: "8px" }}>
               <button onClick={isRecording ? stopRecording : function() { startRecording(setRawInput); }} style={{ background: isRecording ? "#ff446615" : "transparent", border: isRecording ? "1px solid #ff446644" : "1px solid " + f.color + "22", borderRadius: "4px", color: isRecording ? "#ff8899" : f.color + "88", padding: "10px 16px", cursor: "pointer", fontSize: "12px", display: "flex", alignItems: "center", gap: "6px" }}>
                 🎤 {isRecording ? "STOP" : "VOCAL"}
+              </button>
+              <button onClick={saveRawIdea} disabled={!rawInput.trim() || isProcessing} style={{ background: rawInput.trim() && !isProcessing ? "rgba(0,255,136,0.06)" : "transparent", border: "1px solid " + (rawInput.trim() && !isProcessing ? "#00ff8844" : "#00ff8815"), borderRadius: "4px", color: rawInput.trim() && !isProcessing ? "#00ff88" : "#445544", padding: "10px 14px", cursor: rawInput.trim() && !isProcessing ? "pointer" : "not-allowed", fontSize: "11px", fontWeight: "700", letterSpacing: "0.08em", whiteSpace: "nowrap", transition: "all 0.2s" }}>
+                💾 SAUV.
               </button>
               <button onClick={generateIdea} disabled={!rawInput.trim() || isProcessing} style={{ flex: 1, background: rawInput.trim() && !isProcessing ? f.color + "18" : "transparent", border: "1px solid " + (rawInput.trim() && !isProcessing ? f.color : f.color + "20"), borderRadius: "4px", color: rawInput.trim() && !isProcessing ? f.color : "#88bbaa", padding: "10px", cursor: rawInput.trim() && !isProcessing ? "pointer" : "not-allowed", fontSize: "12px", fontWeight: "700", letterSpacing: "0.1em", textShadow: rawInput.trim() && !isProcessing ? "0 0 14px " + f.color : "none", transition: "all 0.2s" }}>
                 {isProcessing ? "GENERATION..." : "GENERER — " + f.label.toUpperCase()}
