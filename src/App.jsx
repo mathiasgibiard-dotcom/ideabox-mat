@@ -583,24 +583,54 @@ export default function App() {
             </div>
           </div>
 
-          {/* MODIFIER / COMPLETER */}
+          {/* MODIFIER / COMPLETER + FICHIERS */}
           <div style={{ background: "rgba(2,14,8,0.9)", border: "1px solid " + (isEditing ? fc + "66" : "#00ff8815"), borderRadius: "6px", padding: "16px", marginBottom: "12px" }}>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: isEditing ? "12px" : "0" }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "12px" }}>
               <div style={{ fontSize: "10px", color: "#88bbaa", letterSpacing: "0.15em" }}>✏ MODIFIER / COMPLETER</div>
-              {!isEditing ? (
-                <button onClick={function() {
-                  setEditMode(true);
-                  setEditingId(idea.id);
-                  setEditText(idea.raw || "");
-                }} style={{ background: fc + "18", border: "1px solid " + fc + "55", borderRadius: "4px", color: fc, padding: "6px 14px", cursor: "pointer", fontSize: "11px", fontWeight: "700", letterSpacing: "0.08em", textShadow: "0 0 8px " + fc }}>
-                  MODIFIER
+              <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
+                <button onClick={function() { if (fileInputRef.current) fileInputRef.current.click(); }} disabled={isUploading} style={{ background: isUploading ? "transparent" : "rgba(0,255,136,0.08)", border: "1px solid #00ff8833", borderRadius: "3px", color: isUploading ? "#88bbaa" : "#00ff88", padding: "4px 10px", cursor: isUploading ? "not-allowed" : "pointer", fontSize: "10px", fontWeight: "700", letterSpacing: "0.06em" }}>
+                  {isUploading ? "UPLOAD..." : "📎 FICHIER"}
                 </button>
-              ) : (
-                <button onClick={function() { setEditMode(false); setEditText(""); setEditingId(null); }} style={{ background: "transparent", border: "1px solid #ff446633", borderRadius: "4px", color: "#ff8899", padding: "6px 12px", cursor: "pointer", fontSize: "11px" }}>
-                  ANNULER
-                </button>
-              )}
+                <input ref={fileInputRef} type="file" multiple accept="*/*" style={{ display: "none" }} onChange={function(e) { var files = Array.from(e.target.files); files.forEach(function(f) { uploadFile(idea.id, f); }); e.target.value = ""; }}/>
+                {!isEditing ? (
+                  <button onClick={function() { setEditMode(true); setEditingId(idea.id); setEditText(idea.raw || ""); }} style={{ background: fc + "18", border: "1px solid " + fc + "55", borderRadius: "4px", color: fc, padding: "6px 14px", cursor: "pointer", fontSize: "11px", fontWeight: "700", letterSpacing: "0.08em", textShadow: "0 0 8px " + fc }}>
+                    MODIFIER
+                  </button>
+                ) : (
+                  <button onClick={function() { setEditMode(false); setEditText(""); setEditingId(null); }} style={{ background: "transparent", border: "1px solid #ff446633", borderRadius: "4px", color: "#ff8899", padding: "6px 12px", cursor: "pointer", fontSize: "11px" }}>
+                    ANNULER
+                  </button>
+                )}
+              </div>
             </div>
+
+            {/* Liste fichiers joints */}
+            {(ideaFiles[idea.id] || []).length > 0 && (
+              <div style={{ display: "flex", flexDirection: "column", gap: "5px", marginBottom: "12px", paddingBottom: "12px", borderBottom: "1px solid #00ff8810" }}>
+                {(ideaFiles[idea.id] || []).map(function(file) {
+                  var rawName = file.name || "";
+                  var displayName = rawName.replace(/^\d+_/, "");
+                  var url = getFileUrl(idea.id, rawName);
+                  return (
+                    <div key={rawName} style={{ display: "flex", alignItems: "center", gap: "8px", background: "rgba(0,255,136,0.03)", border: "1px solid #00ff8812", borderRadius: "4px", padding: "7px 10px" }}>
+                      {isImage(rawName) ? (
+                        <a href={url} target="_blank" rel="noreferrer" style={{ flexShrink: 0 }}>
+                          <img src={url} alt={displayName} style={{ width: "34px", height: "34px", objectFit: "cover", borderRadius: "3px", border: "1px solid #00ff8822" }}/>
+                        </a>
+                      ) : (
+                        <span style={{ fontSize: "18px", flexShrink: 0 }}>{getFileIcon(rawName)}</span>
+                      )}
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <a href={url} target="_blank" rel="noreferrer" style={{ color: "#aaccbb", fontSize: "11px", textDecoration: "none", display: "block", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{displayName}</a>
+                        <div style={{ fontSize: "9px", color: "#445544", marginTop: "1px" }}>{file.metadata && file.metadata.size ? (file.metadata.size / 1024).toFixed(0) + " Ko" : ""}</div>
+                      </div>
+                      <button onClick={function() { deleteFile(idea.id, rawName); }} style={{ background: "transparent", border: "1px solid #ff446633", borderRadius: "3px", color: "#ff6677", padding: "3px 7px", cursor: "pointer", fontSize: "11px", flexShrink: 0 }}>🗑</button>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
             {isEditing && (
               <div>
                 <div style={{ fontSize: "10px", color: fc + "88", letterSpacing: "0.12em", marginBottom: "8px" }}>MODIFIE OU COMPLETE TON IDEE ORIGINALE</div>
@@ -667,44 +697,6 @@ export default function App() {
                 return <button key={fl.id} onClick={function() { updateIdea(idea.id, { folder: fl.label, folder_color: fl.color }); }} style={{ background: "transparent", border: "1px solid " + fl.color + "33", borderRadius: "3px", color: fl.color + "99", padding: "5px 10px", cursor: "pointer", fontSize: "10px", transition: "all 0.15s" }}>{fl.icon} {fl.label}</button>;
               })}
             </div>
-          </div>
-
-          {/* Fichiers */}
-          <div style={{ background: "rgba(2,14,8,0.9)", border: "1px solid #00ff8815", borderRadius: "6px", padding: "14px", marginBottom: "12px" }}>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "10px" }}>
-              <div style={{ fontSize: "10px", color: "#88bbaa", letterSpacing: "0.15em" }}>📎 FICHIERS JOINTS</div>
-              <button onClick={function() { if (fileInputRef.current) fileInputRef.current.click(); }} disabled={isUploading} style={{ background: isUploading ? "transparent" : fc + "12", border: "1px solid " + fc + "44", borderRadius: "3px", color: isUploading ? "#88bbaa" : fc, padding: "4px 12px", cursor: isUploading ? "not-allowed" : "pointer", fontSize: "10px", fontWeight: "700", letterSpacing: "0.06em" }}>
-                {isUploading ? "UPLOAD..." : "+ AJOUTER"}
-              </button>
-              <input ref={fileInputRef} type="file" multiple accept="*/*" style={{ display: "none" }} onChange={function(e) { var files = Array.from(e.target.files); files.forEach(function(f) { uploadFile(idea.id, f); }); e.target.value = ""; }}/>
-            </div>
-            {(ideaFiles[idea.id] || []).length === 0 ? (
-              <div style={{ textAlign: "center", padding: "16px 0", fontSize: "11px", color: "#334433", letterSpacing: "0.1em" }}>AUCUN FICHIER</div>
-            ) : (
-              <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-                {(ideaFiles[idea.id] || []).map(function(file) {
-                  var rawName = file.name || "";
-                  var displayName = rawName.replace(/^\d+_/, "");
-                  var url = getFileUrl(idea.id, rawName);
-                  return (
-                    <div key={rawName} style={{ display: "flex", alignItems: "center", gap: "8px", background: "rgba(0,255,136,0.03)", border: "1px solid #00ff8812", borderRadius: "4px", padding: "8px 10px" }}>
-                      {isImage(rawName) ? (
-                        <a href={url} target="_blank" rel="noreferrer" style={{ flexShrink: 0 }}>
-                          <img src={url} alt={displayName} style={{ width: "38px", height: "38px", objectFit: "cover", borderRadius: "3px", border: "1px solid #00ff8822" }}/>
-                        </a>
-                      ) : (
-                        <span style={{ fontSize: "20px", flexShrink: 0 }}>{getFileIcon(rawName)}</span>
-                      )}
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <a href={url} target="_blank" rel="noreferrer" style={{ color: "#aaccbb", fontSize: "11px", textDecoration: "none", display: "block", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{displayName}</a>
-                        <div style={{ fontSize: "9px", color: "#445544", marginTop: "2px" }}>{file.metadata && file.metadata.size ? (file.metadata.size / 1024).toFixed(0) + " Ko" : ""}</div>
-                      </div>
-                      <button onClick={function() { deleteFile(idea.id, rawName); }} style={{ background: "transparent", border: "1px solid #ff446633", borderRadius: "3px", color: "#ff6677", padding: "4px 8px", cursor: "pointer", fontSize: "11px", flexShrink: 0 }}>🗑</button>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
           </div>
 
           {/* Idee originale */}
