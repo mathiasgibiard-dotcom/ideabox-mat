@@ -216,6 +216,25 @@ export default function App() {
   var isGeneratingPreview = genPreviewState[0];
   var setIsGeneratingPreview = genPreviewState[1];
 
+  // Gestionnaire documentaire
+  var docsState = useState([]);
+  var uploadedDocs = docsState[0];
+  var setUploadedDocs = docsState[1];
+
+  var docResultState = useState(null);
+  var docResult = docResultState[0];
+  var setDocResult = docResultState[1];
+
+  var docModeState = useState("resumer");
+  var docMode = docModeState[0];
+  var setDocMode = docModeState[1];
+
+  var isAnalyzingState = useState(false);
+  var isAnalyzing = isAnalyzingState[0];
+  var setIsAnalyzing = isAnalyzingState[1];
+
+  var docFileInputRef = useRef(null);
+
   var recognitionRef = useRef(null);
   var inputRef = useRef(null);
   var editRef = useRef(null);
@@ -452,7 +471,73 @@ export default function App() {
     });
   }
 
-  function loadFiles(ideaId) {
+  function readFileAsText(file) {
+    return new Promise(function(resolve) {
+      var reader = new FileReader();
+      reader.onload = function(e) { resolve(e.target.result); };
+      reader.onerror = function() { resolve("[Erreur lecture: " + file.name + "]"); };
+      if (file.type === "application/pdf") {
+        resolve("[PDF: " + file.name + " — contenu non extractible directement, décris son contenu]");
+      } else {
+        reader.readAsText(file, "UTF-8");
+      }
+    });
+  }
+
+  function analyzeDocuments() {
+    if (uploadedDocs.length === 0) return;
+    setIsAnalyzing(true);
+    setDocResult(null);
+
+    Promise.all(uploadedDocs.map(function(d) { return readFileAsText(d.file); })).then(function(contents) {
+      var systemPrompts = {
+        resumer: "Tu es un assistant expert en analyse documentaire. Reponds en francais avec du Markdown structure (titres ##, listes -, gras **). Sois precis, concis et utile.",
+        analyser: "Tu es un expert en analyse documentaire multi-sources. Reponds en francais avec du Markdown structure. Identifie les themes communs, repetitions, contradictions et points cles de chaque document.",
+        restructurer: "Tu es un expert en redaction et organisation documentaire. Reponds en francais avec du Markdown. Reorganise et fusionne les contenus en un document propre, sans repetitions, bien structure avec des sections claires.",
+      };
+      var userPrompts = {
+        resumer: "Voici le document a resumer :\n\n--- " + uploadedDocs[0].name + " ---\n" + contents[0] + "\n\nFais un resume structure avec : points cles, idees principales, conclusions importantes.",
+        analyser: contents.map(function(c, i) { return "--- DOCUMENT " + (i+1) + " : " + uploadedDocs[i].name + " ---\n" + c; }).join("\n\n") + "\n\nAnalyse ces " + contents.length + " documents : themes communs, repetitions, idees uniques a chaque doc, contradictions, et synthese globale.",
+        restructurer: contents.map(function(c, i) { return "--- DOCUMENT " + (i+1) + " : " + uploadedDocs[i].name + " ---\n" + c; }).join("\n\n") + "\n\nRestructure et fusionne ces documents en un seul document propre et coherent. Elimine les repetitions, organise par themes, garde les meilleures formulations.",
+      };
+
+      fetch("/api/claude", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ model: "claude-opus-4-7", max_tokens: 4000, system: systemPrompts[docMode], messages: [{ role: "user", content: userPrompts[docMode] }] }),
+      }).then(function(r) { return r.json(); }).then(function(data) {
+        var text = data.content && data.content[0] ? data.content[0].text : "Aucun resultat.";
+        setDocResult(text);
+        setIsAnalyzing(false);
+      }).catch(function() {
+        showToast("Erreur analyse", "err");
+        setIsAnalyzing(false);
+      });
+    });
+  }
+
+  function downloadDocResult() {
+    if (!docResult) return;
+    var modeLabels = { resumer: "Resume", analyser: "Analyse", restructurer: "Document_restructure" };
+    var filename = modeLabels[docMode] + "_" + new Date().toLocaleDateString("fr-FR").replace(/\//g, "-") + ".md";
+    var blob = new Blob([docResult], { type: "text/markdown;charset=utf-8" });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement("a");
+    a.href = url; a.download = filename; a.click();
+    URL.revokeObjectURL(url);
+    showToast("Fichier telecharge !");
+  }
+
+  function renderMarkdown(text) {
+    return text
+      .replace(/^### (.+)$/gm, "<h3 style='color:#00aaff;font-size:13px;margin:14px 0 6px;letter-spacing:0.08em'>$1</h3>")
+      .replace(/^## (.+)$/gm, "<h2 style='color:#00ccff;font-size:15px;margin:16px 0 8px;letter-spacing:0.06em;border-bottom:1px solid #00aaff22;padding-bottom:6px'>$1</h2>")
+      .replace(/^# (.+)$/gm, "<h1 style='color:#00e5ff;font-size:17px;margin:18px 0 10px;letter-spacing:0.05em'>$1</h1>")
+      .replace(/\*\*(.+?)\*\*/g, "<strong style='color:#c8ffd4'>$1</strong>")
+      .replace(/^- (.+)$/gm, "<div style='display:flex;gap:8px;margin:3px 0'><span style='color:#00aaff;flex-shrink:0'>›</span><span>$1</span></div>")
+      .replace(/\n\n/g, "<br/><br/>")
+      .replace(/\n/g, "<br/>");
+  }
     fetch(SUPABASE_URL + "/storage/v1/object/list/idea-files", {
       method: "POST",
       headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": "Bearer " + SUPABASE_KEY },
@@ -548,6 +633,7 @@ export default function App() {
             </div>
           </div>
           <div style={{ display: "flex", gap: "6px" }}>
+            <button onClick={function() { setScreen("docs"); }} style={{ background: screen === "docs" ? "rgba(0,180,255,0.08)" : "transparent", border: "1px solid " + (screen === "docs" ? "#00aaff44" : "#00ff8818"), borderRadius: "4px", color: screen === "docs" ? "#00aaff" : "#88bbaa", padding: "7px 10px", cursor: "pointer", fontSize: "11px", letterSpacing: "0.08em" }}>📄 DOCS</button>
             <button onClick={function() { setScreen("ideas"); }} style={{ background: screen === "ideas" ? "rgba(0,255,136,0.08)" : "transparent", border: "1px solid " + (screen === "ideas" ? "#00ff8844" : "#00ff8818"), borderRadius: "4px", color: screen === "ideas" ? "#00ff88" : "#88bbaa", padding: "7px 10px", cursor: "pointer", fontSize: "11px", letterSpacing: "0.08em" }}>LISTE</button>
             <button onClick={loadIdeas} style={{ background: "transparent", border: "1px solid #00ff8818", borderRadius: "4px", color: "#88bbaa", padding: "7px 10px", cursor: "pointer", fontSize: "13px" }}>⟳</button>
           </div>
@@ -555,6 +641,112 @@ export default function App() {
       </div>
     );
   }
+
+  // DOCS
+  if (screen === "docs") return (
+    <div style={wrap}>
+      <BG/><Header back={false}/>
+      <div style={{ padding: "16px", maxWidth: "700px", margin: "0 auto", position: "relative", zIndex: 1 }}>
+
+        {/* Titre */}
+        <div style={{ marginBottom: "16px" }}>
+          <div style={{ fontSize: "16px", fontWeight: "700", color: "#00aaff", textShadow: "0 0 20px #00aaff, 0 0 40px #00aaff66", letterSpacing: "0.08em", marginBottom: "4px" }}>📄 GESTIONNAIRE DOCS</div>
+          <div style={{ fontSize: "10px", color: "#88bbaa", letterSpacing: "0.12em" }}>RESUME · ANALYSE · RESTRUCTURE · TELECHARGE</div>
+        </div>
+
+        {/* Modes */}
+        <div style={{ display: "flex", gap: "6px", marginBottom: "14px" }}>
+          {[
+            { id: "resumer", label: "📋 RÉSUMER", desc: "1 doc", color: "#00aaff" },
+            { id: "analyser", label: "🔍 ANALYSER", desc: "multi-docs", color: "#bf5fff" },
+            { id: "restructurer", label: "✨ RESTRUCTURER", desc: "fusionner", color: "#00ffcc" },
+          ].map(function(m) {
+            return (
+              <button key={m.id} onClick={function() { setDocMode(m.id); setDocResult(null); setUploadedDocs([]); }} style={{ flex: 1, background: docMode === m.id ? m.color + "15" : "transparent", border: "1px solid " + (docMode === m.id ? m.color + "66" : "#00ff8815"), borderRadius: "6px", padding: "10px 6px", cursor: "pointer", textAlign: "center", transition: "all 0.2s" }}>
+                <div style={{ fontSize: "11px", fontWeight: "700", color: docMode === m.id ? m.color : "#88bbaa", letterSpacing: "0.06em" }}>{m.label}</div>
+                <div style={{ fontSize: "9px", color: docMode === m.id ? m.color + "99" : "#445544", marginTop: "2px" }}>{m.desc}</div>
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Zone upload */}
+        <div style={{ background: "rgba(2,14,8,0.9)", border: "1px solid #00aaff22", borderRadius: "6px", padding: "16px", marginBottom: "12px" }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "10px" }}>
+            <div style={{ fontSize: "10px", color: "#88bbaa", letterSpacing: "0.15em" }}>
+              {docMode === "resumer" ? "DOCUMENT A ANALYSER (1 MAX)" : "DOCUMENTS A ANALYSER (2-5)"}
+            </div>
+            <button onClick={function() { if (docFileInputRef.current) docFileInputRef.current.click(); }} style={{ background: "rgba(0,170,255,0.1)", border: "1px solid #00aaff44", borderRadius: "3px", color: "#00aaff", padding: "5px 12px", cursor: "pointer", fontSize: "10px", fontWeight: "700", letterSpacing: "0.06em" }}>
+              + AJOUTER
+            </button>
+            <input ref={docFileInputRef} type="file" multiple={docMode !== "resumer"} accept=".txt,.md,.doc,.docx,.pdf,.csv" style={{ display: "none" }} onChange={function(e) {
+              var files = Array.from(e.target.files);
+              var newDocs = files.map(function(f) { return { name: f.name, size: f.size, file: f, id: Date.now() + Math.random() }; });
+              if (docMode === "resumer") { setUploadedDocs(newDocs.slice(0, 1)); }
+              else { setUploadedDocs(function(prev) { return prev.concat(newDocs).slice(0, 5); }); }
+              e.target.value = "";
+            }}/>
+          </div>
+
+          {uploadedDocs.length === 0 ? (
+            <div onClick={function() { if (docFileInputRef.current) docFileInputRef.current.click(); }} style={{ border: "1px dashed #00aaff22", borderRadius: "4px", padding: "24px", textAlign: "center", cursor: "pointer" }}>
+              <div style={{ fontSize: "28px", marginBottom: "8px", opacity: 0.4 }}>📂</div>
+              <div style={{ fontSize: "11px", color: "#445566", letterSpacing: "0.1em" }}>CLIQUE POUR AJOUTER UN DOCUMENT</div>
+              <div style={{ fontSize: "9px", color: "#334433", marginTop: "4px" }}>TXT · MD · DOC · PDF · CSV</div>
+            </div>
+          ) : (
+            <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+              {uploadedDocs.map(function(doc) {
+                return (
+                  <div key={doc.id} style={{ display: "flex", alignItems: "center", gap: "8px", background: "rgba(0,170,255,0.04)", border: "1px solid #00aaff15", borderRadius: "4px", padding: "8px 12px" }}>
+                    <span style={{ fontSize: "18px" }}>📄</span>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: "11px", color: "#aaccdd", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{doc.name}</div>
+                      <div style={{ fontSize: "9px", color: "#445566", marginTop: "1px" }}>{(doc.size / 1024).toFixed(0)} Ko</div>
+                    </div>
+                    <button onClick={function() { setUploadedDocs(function(prev) { return prev.filter(function(d) { return d.id !== doc.id; }); }); }} style={{ background: "transparent", border: "none", color: "#ff6677", cursor: "pointer", fontSize: "12px" }}>✕</button>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
+        {/* Bouton analyser */}
+        {uploadedDocs.length > 0 && (
+          <button onClick={analyzeDocuments} disabled={isAnalyzing} style={{ width: "100%", background: isAnalyzing ? "transparent" : "rgba(0,170,255,0.1)", border: "1px solid " + (isAnalyzing ? "#00aaff22" : "#00aaff55"), borderRadius: "6px", color: isAnalyzing ? "#88bbaa" : "#00aaff", padding: "13px", cursor: isAnalyzing ? "not-allowed" : "pointer", fontSize: "13px", fontWeight: "700", letterSpacing: "0.1em", textShadow: isAnalyzing ? "none" : "0 0 14px #00aaff66", marginBottom: "14px", transition: "all 0.2s", fontFamily: "inherit" }}>
+            {isAnalyzing ? "ANALYSE EN COURS..." : (docMode === "resumer" ? "📋 RÉSUMER CE DOCUMENT" : docMode === "analyser" ? "🔍 ANALYSER LES DOCUMENTS" : "✨ RESTRUCTURER ET FUSIONNER")}
+          </button>
+        )}
+
+        {/* Résultat */}
+        {isAnalyzing && (
+          <div style={{ background: "rgba(2,14,8,0.9)", border: "1px solid #00aaff22", borderRadius: "6px", padding: "32px", textAlign: "center", marginBottom: "12px" }}>
+            <div style={{ fontSize: "28px", marginBottom: "12px", animation: "pulse 1.2s infinite" }}>🤖</div>
+            <div style={{ fontSize: "12px", color: "#00aaff", letterSpacing: "0.15em", animation: "pulse 1.2s infinite" }}>CLAUDE ANALYSE...</div>
+            <div style={{ fontSize: "10px", color: "#445566", marginTop: "6px" }}>Cela peut prendre quelques secondes</div>
+          </div>
+        )}
+
+        {docResult && !isAnalyzing && (
+          <div style={{ background: "rgba(2,14,8,0.95)", border: "1px solid #00aaff22", borderRadius: "6px", padding: "18px", marginBottom: "12px" }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "14px" }}>
+              <div style={{ fontSize: "10px", color: "#00aaff88", letterSpacing: "0.15em" }}>
+                {docMode === "resumer" ? "📋 RESUME" : docMode === "analyser" ? "🔍 ANALYSE" : "✨ DOCUMENT RESTRUCTURE"}
+              </div>
+              <div style={{ display: "flex", gap: "6px" }}>
+                <button onClick={function() { navigator.clipboard.writeText(docResult); showToast("Copie !"); }} style={{ background: "transparent", border: "1px solid #00aaff33", borderRadius: "3px", color: "#00aaff88", padding: "4px 10px", cursor: "pointer", fontSize: "10px" }}>COPIER</button>
+                <button onClick={downloadDocResult} style={{ background: "rgba(0,170,255,0.1)", border: "1px solid #00aaff55", borderRadius: "3px", color: "#00aaff", padding: "4px 10px", cursor: "pointer", fontSize: "10px", fontWeight: "700" }}>⬇ TÉLÉCHARGER</button>
+              </div>
+            </div>
+            <div style={{ fontSize: "12px", color: "#99ccaa", lineHeight: "1.8", maxHeight: "500px", overflowY: "auto" }} dangerouslySetInnerHTML={{ __html: renderMarkdown(docResult) }}/>
+          </div>
+        )}
+
+      </div>
+      {toast && <Toast toast={toast}/>}<Styles/>
+    </div>
+  );
 
   // HOME
   if (screen === "home") return (
