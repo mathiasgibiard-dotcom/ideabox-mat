@@ -538,6 +538,8 @@ export default function App() {
       .replace(/\n\n/g, "<br/><br/>")
       .replace(/\n/g, "<br/>");
   }
+
+  function loadFiles(ideaId) {
     fetch(SUPABASE_URL + "/storage/v1/object/list/idea-files", {
       method: "POST",
       headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": "Bearer " + SUPABASE_KEY },
