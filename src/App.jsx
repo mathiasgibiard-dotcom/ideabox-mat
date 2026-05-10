@@ -360,9 +360,9 @@ export default function App() {
                 <span style={{ color: "#88ccaa", fontWeight: "600" }}>{ideas.length} IDEE{ideas.length !== 1 ? "S" : ""}</span>
                 <span style={{ display: "flex", alignItems: "center", gap: "4px" }}>
                   <span style={{ width: 7, height: 7, borderRadius: "50%", background: syncDot, display: "inline-block", boxShadow: "0 0 8px " + syncDot, animation: syncStatus === "syncing" ? "pulse 1s infinite" : "none" }}/>
-                  <span style={{ color: "#557766" }}>{syncStatus === "ok" ? "SYNC OK" : syncStatus === "syncing" ? "SYNC..." : syncStatus === "err" ? "ERREUR" : "..."}</span>
+                  <span style={{ color: "#88bbaa" }}>{syncStatus === "ok" ? "SYNC OK" : syncStatus === "syncing" ? "SYNC..." : syncStatus === "err" ? "ERREUR" : "..."}</span>
                 </span>
-                <span style={{ color: "#334433" }}>{time}</span>
+                <span style={{ color: "#667766" }}>{time}</span>
               </div>
             </div>
           </div>
@@ -380,7 +380,7 @@ export default function App() {
     <div style={wrap}>
       <BG/><Header/>
       <div style={{ padding: "20px 16px", maxWidth: "700px", margin: "0 auto", position: "relative", zIndex: 1 }}>
-        <p style={{ textAlign: "center", margin: "0 0 20px", fontSize: "11px", color: "#446655", letterSpacing: "0.18em" }}>CHOISIS LE TYPE DE PROJET</p>
+        <p style={{ textAlign: "center", margin: "0 0 20px", fontSize: "11px", color: "#88bbaa", letterSpacing: "0.18em" }}>CHOISIS LE TYPE DE PROJET</p>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
           {FOLDERS.map(function(f, idx) {
             return (
@@ -390,14 +390,14 @@ export default function App() {
                   <span style={{ fontSize: f.id === "libre" ? "22px" : "20px" }}>{f.icon}</span>
                   <span style={{ fontSize: f.id === "libre" ? "15px" : "13px", fontWeight: "700", color: f.color, textShadow: "0 0 16px " + f.color + ", 0 0 30px " + f.color + "88", letterSpacing: "0.06em" }}>{f.label.toUpperCase()}</span>
                 </div>
-                <p style={{ margin: 0, fontSize: "11px", color: "#668877" }}>{f.desc}</p>
+                <p style={{ margin: 0, fontSize: "11px", color: "#99ccaa" }}>{f.desc}</p>
                 {f.id === "libre" && <div style={{ marginTop: "8px", fontSize: "10px", color: f.color + "77", letterSpacing: "0.1em" }}>L'IA ANALYSE ET CHOISIT LE TYPE AUTOMATIQUEMENT</div>}
               </button>
             );
           })}
         </div>
         {ideas.length > 0 && (
-          <button onClick={function() { setScreen("ideas"); }} style={{ width: "100%", marginTop: "16px", background: "transparent", border: "1px solid #00ff8820", borderRadius: "6px", color: "#446655", padding: "14px", cursor: "pointer", fontSize: "11px", letterSpacing: "0.12em", fontFamily: "inherit" }}>
+          <button onClick={function() { setScreen("ideas"); }} style={{ width: "100%", marginTop: "16px", background: "transparent", border: "1px solid #00ff8820", borderRadius: "6px", color: "#88bbaa", padding: "14px", cursor: "pointer", fontSize: "11px", letterSpacing: "0.12em", fontFamily: "inherit" }}>
             VOIR MES {ideas.length} IDEE{ideas.length !== 1 ? "S" : ""} →
           </button>
         )}
@@ -463,12 +463,12 @@ export default function App() {
             </div>
             <p style={{ margin: "0 0 10px", fontSize: "13px", color: "#99ccaa", lineHeight: "1.6" }}>{idea.concept}</p>
             <div style={{ display: "flex", gap: "5px", flexWrap: "wrap" }}>
-              {tags.map(function(tag) { return <span key={tag} style={{ fontSize: "9px", padding: "2px 7px", border: "1px solid #00ff8818", borderRadius: "2px", color: "#557766" }}>#{tag}</span>; })}
+              {tags.map(function(tag) { return <span key={tag} style={{ fontSize: "9px", padding: "2px 7px", border: "1px solid #00ff8818", borderRadius: "2px", color: "#88bbaa" }}>#{tag}</span>; })}
             </div>
           </div>
 
           <div style={{ background: "rgba(2,14,8,0.9)", border: "1px solid #00ff8815", borderRadius: "6px", padding: "16px", marginBottom: "12px" }}>
-            <div style={{ fontSize: "10px", color: "#446655", letterSpacing: "0.15em", marginBottom: "10px" }}>FONCTIONNALITES</div>
+            <div style={{ fontSize: "10px", color: "#88bbaa", letterSpacing: "0.15em", marginBottom: "10px" }}>FONCTIONNALITES</div>
             {foncs.map(function(ft, i) {
               return <div key={i} style={{ display: "flex", gap: "10px", padding: "6px 0", borderBottom: i < foncs.length - 1 ? "1px solid #00ff8810" : "none", fontSize: "13px", color: "#99ccaa" }}>
                 <span style={{ color: fc, flexShrink: 0 }}>{">"}</span>{ft}
@@ -487,7 +487,7 @@ export default function App() {
           )}
 
           <div style={{ background: "rgba(2,14,8,0.9)", border: "1px solid #00ff8815", borderRadius: "6px", padding: "14px", marginBottom: "12px" }}>
-            <div style={{ fontSize: "10px", color: "#446655", letterSpacing: "0.15em", marginBottom: "10px" }}>CHANGER LE STATUT</div>
+            <div style={{ fontSize: "10px", color: "#88bbaa", letterSpacing: "0.15em", marginBottom: "10px" }}>CHANGER LE STATUT</div>
             <div style={{ display: "flex", gap: "8px" }}>
               {Object.keys(STATUS_CONFIG).map(function(k) {
                 var v = STATUS_CONFIG[k];
@@ -497,7 +497,7 @@ export default function App() {
           </div>
 
           <div style={{ background: "rgba(2,14,8,0.9)", border: "1px solid #00ff8815", borderRadius: "6px", padding: "14px", marginBottom: "12px" }}>
-            <div style={{ fontSize: "10px", color: "#446655", letterSpacing: "0.15em", marginBottom: "10px" }}>DEPLACER DANS</div>
+            <div style={{ fontSize: "10px", color: "#88bbaa", letterSpacing: "0.15em", marginBottom: "10px" }}>DEPLACER DANS</div>
             <div style={{ display: "flex", gap: "6px", flexWrap: "wrap" }}>
               {FOLDERS.filter(function(fl) { return fl.label !== idea.folder && fl.id !== "libre"; }).map(function(fl) {
                 return <button key={fl.id} onClick={function() { updateIdea(idea.id, { folder: fl.label, folder_color: fl.color }); }} style={{ background: "transparent", border: "1px solid " + fl.color + "33", borderRadius: "3px", color: fl.color + "88", padding: "5px 10px", cursor: "pointer", fontSize: "10px", transition: "all 0.15s" }}>{fl.icon} {fl.label}</button>;
@@ -506,9 +506,9 @@ export default function App() {
           </div>
 
           <div style={{ background: "rgba(2,14,8,0.9)", border: "1px solid #00ff8810", borderRadius: "6px", padding: "14px", marginBottom: "16px" }}>
-            <div style={{ fontSize: "10px", color: "#334433", letterSpacing: "0.15em", marginBottom: "6px" }}>IDEE ORIGINALE</div>
-            <p style={{ margin: "0 0 6px", fontSize: "11px", color: "#446655", fontStyle: "italic", lineHeight: "1.6" }}>{idea.raw}</p>
-            <div style={{ fontSize: "9px", color: "#223322", textAlign: "right" }}>CREE LE {idea.date}</div>
+            <div style={{ fontSize: "10px", color: "#667766", letterSpacing: "0.15em", marginBottom: "6px" }}>IDEE ORIGINALE</div>
+            <p style={{ margin: "0 0 6px", fontSize: "11px", color: "#88bbaa", fontStyle: "italic", lineHeight: "1.6" }}>{idea.raw}</p>
+            <div style={{ fontSize: "9px", color: "#557755", textAlign: "right" }}>CREE LE {idea.date}</div>
           </div>
 
           <div style={{ display: "flex", gap: "8px" }}>
@@ -516,10 +516,10 @@ export default function App() {
             {deleteConfirm === idea.id ? (
               <span>
                 <button onClick={function() { deleteIdea(idea.id); }} style={{ background: "#ff446618", border: "1px solid #ff446644", borderRadius: "4px", color: "#ff7788", padding: "12px 16px", cursor: "pointer", fontSize: "11px", marginRight: "6px" }}>CONFIRMER</button>
-                <button onClick={function() { setDeleteConfirm(null); }} style={{ background: "transparent", border: "1px solid #00ff8818", borderRadius: "4px", color: "#446655", padding: "12px", cursor: "pointer", fontSize: "11px" }}>X</button>
+                <button onClick={function() { setDeleteConfirm(null); }} style={{ background: "transparent", border: "1px solid #00ff8818", borderRadius: "4px", color: "#88bbaa", padding: "12px", cursor: "pointer", fontSize: "11px" }}>X</button>
               </span>
             ) : (
-              <button onClick={function() { setDeleteConfirm(idea.id); }} style={{ background: "transparent", border: "1px solid #ff446620", borderRadius: "4px", color: "#ff446555", padding: "12px 14px", cursor: "pointer", fontSize: "14px" }}>🗑</button>
+              <button onClick={function() { setDeleteConfirm(idea.id); }} style={{ background: "transparent", border: "1px solid #ff446655", borderRadius: "4px", color: "#ff7788", padding: "12px 14px", cursor: "pointer", fontSize: "14px" }}>🗑</button>
             )}
           </div>
         </div>
@@ -534,7 +534,7 @@ export default function App() {
       <BG/><Header back={true} backLabel="ACCUEIL" backAction={function() { setScreen("home"); }}/>
       <div style={{ padding: "16px", maxWidth: "700px", margin: "0 auto", position: "relative", zIndex: 1 }}>
         <div style={{ background: "#020e06", border: "1px solid #00ff8820", borderRadius: "4px", padding: "10px 14px", display: "flex", gap: "10px", alignItems: "center", marginBottom: "12px" }}>
-          <span style={{ color: "#446655" }}>⌕</span>
+          <span style={{ color: "#88bbaa" }}>⌕</span>
           <input value={searchVal} onChange={function(e) { setSearchVal(e.target.value); }} placeholder="Rechercher une idee..." style={{ background: "transparent", border: "none", outline: "none", color: "#aaccbb", fontSize: "13px", fontFamily: "inherit", width: "100%" }}/>
         </div>
         <div style={{ display: "flex", gap: "6px", flexWrap: "wrap", marginBottom: "16px" }}>
@@ -549,7 +549,7 @@ export default function App() {
         {filteredIdeas.length === 0 && (
           <div style={{ textAlign: "center", padding: "60px 20px" }}>
             <div style={{ fontSize: "36px", marginBottom: "12px", opacity: 0.3 }}>💭</div>
-            <p style={{ fontSize: "11px", color: "#334433", letterSpacing: "0.12em" }}>{ideas.length === 0 ? "AUCUNE IDEE" : "AUCUNE IDEE ICI"}</p>
+            <p style={{ fontSize: "11px", color: "#667766", letterSpacing: "0.12em" }}>{ideas.length === 0 ? "AUCUNE IDEE" : "AUCUNE IDEE ICI"}</p>
             <button onClick={function() { setScreen("home"); }} style={{ marginTop: "16px", background: "rgba(0,255,136,0.06)", border: "1px solid #00ff8833", borderRadius: "4px", color: "#00ff88", padding: "10px 20px", cursor: "pointer", fontSize: "11px", fontFamily: "inherit" }}>+ NOUVELLE IDEE</button>
           </div>
         )}
@@ -578,13 +578,13 @@ export default function App() {
                     <p style={{ margin: 0, fontSize: "12px", color: "#88bbaa", lineHeight: "1.5", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>{idea.concept}</p>
                     {tags2.length > 0 && (
                       <div style={{ display: "flex", gap: "4px", flexWrap: "wrap", marginTop: "6px" }}>
-                        {tags2.map(function(tag) { return <span key={tag} style={{ fontSize: "9px", padding: "1px 6px", border: "1px solid #00ff8815", borderRadius: "2px", color: "#446655" }}>#{tag}</span>; })}
+                        {tags2.map(function(tag) { return <span key={tag} style={{ fontSize: "9px", padding: "1px 6px", border: "1px solid #00ff8815", borderRadius: "2px", color: "#88bbaa" }}>#{tag}</span>; })}
                       </div>
                     )}
                   </div>
                   <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: "5px", flexShrink: 0 }}>
                     <span style={{ fontSize: "9px", padding: "2px 7px", border: "1px solid " + fc2 + "33", borderRadius: "2px", color: fc2 + "99" }}>{(idea.folder || "").toUpperCase()}</span>
-                    <span style={{ color: "#334433", fontSize: "11px" }}>{">"}</span>
+                    <span style={{ color: "#667766", fontSize: "11px" }}>{">"}</span>
                   </div>
                 </div>
               </div>
