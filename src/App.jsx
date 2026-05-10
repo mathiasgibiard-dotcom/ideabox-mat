@@ -563,11 +563,7 @@ export default function App() {
                 {copiedId === idea.id ? "COPIE ! COLLE DANS CLAUDE" : "COPIER LE PROMPT"}
               </button>
               <button onClick={function() {
-                var guidedPrompt = idea.prompt + "
-
----
-
-IMPORTANT : Guide-moi etape par etape dans la creation de ce projet. Commence par me poser 3-5 questions pour affiner le besoin, puis propose une architecture et attend ma validation, puis developpe module par module en attendant ma confirmation a chaque etape.";
+                var guidedPrompt = idea.prompt + "\n\n---\n\nIMPORTANT : Guide-moi etape par etape dans la creation de ce projet. Commence par me poser 3-5 questions pour affiner le besoin, puis propose une architecture et attend ma validation, puis developpe module par module en attendant ma confirmation a chaque etape.";
                 navigator.clipboard.writeText(guidedPrompt).then(function() {
                   showToast("Mode guide copie — colle dans Claude !");
                 });
