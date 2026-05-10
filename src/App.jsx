@@ -647,7 +647,7 @@ export default function App() {
   // DOCS
   if (screen === "docs") return (
     <div style={wrap}>
-      <BG/><Header back={false}/>
+      <BG/><Header back={true} backLabel="ACCUEIL" backAction={function() { setScreen("home"); }}/>
       <div style={{ padding: "16px", maxWidth: "700px", margin: "0 auto", position: "relative", zIndex: 1 }}>
 
         {/* Titre */}
@@ -664,7 +664,7 @@ export default function App() {
             { id: "restructurer", label: "✨ RESTRUCTURER", desc: "fusionner", color: "#00ffcc" },
           ].map(function(m) {
             return (
-              <button key={m.id} onClick={function() { setDocMode(m.id); setDocResult(null); setUploadedDocs([]); }} style={{ flex: 1, background: docMode === m.id ? m.color + "15" : "transparent", border: "1px solid " + (docMode === m.id ? m.color + "66" : "#00ff8815"), borderRadius: "6px", padding: "10px 6px", cursor: "pointer", textAlign: "center", transition: "all 0.2s" }}>
+              <button key={m.id} onClick={function() { setDocMode(m.id); setDocResult(null); }} style={{ flex: 1, background: docMode === m.id ? m.color + "15" : "transparent", border: "1px solid " + (docMode === m.id ? m.color + "66" : "#00ff8815"), borderRadius: "6px", padding: "10px 6px", cursor: "pointer", textAlign: "center", transition: "all 0.2s" }}>
                 <div style={{ fontSize: "11px", fontWeight: "700", color: docMode === m.id ? m.color : "#88bbaa", letterSpacing: "0.06em" }}>{m.label}</div>
                 <div style={{ fontSize: "9px", color: docMode === m.id ? m.color + "99" : "#445544", marginTop: "2px" }}>{m.desc}</div>
               </button>
