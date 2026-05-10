@@ -472,15 +472,39 @@ export default function App() {
   }
 
   function readFileAsText(file) {
+    var needsExtract = file.type === "application/pdf" ||
+      file.type === "application/vnd.openxmlformats-officedocument.wordprocessingml.document" ||
+      file.type === "application/msword" ||
+      file.name.endsWith(".pdf") ||
+      file.name.endsWith(".docx") ||
+      file.name.endsWith(".doc");
+
+    if (needsExtract) {
+      return new Promise(function(resolve) {
+        var reader = new FileReader();
+        reader.onload = function(e) {
+          var base64 = e.target.result.split(",")[1];
+          fetch("/api/extract", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ filename: file.name, base64: base64, mimetype: file.type }),
+          }).then(function(r) { return r.json(); }).then(function(data) {
+            if (data.error) { resolve("[Erreur extraction: " + data.error + "]"); return; }
+            var text = data.text || "";
+            if (data.truncated) text += "\n\n[Document tronqué à 15 000 caractères]";
+            resolve(text);
+          }).catch(function() { resolve("[Erreur serveur lors de l'extraction]"); });
+        };
+        reader.onerror = function() { resolve("[Erreur lecture: " + file.name + "]"); };
+        reader.readAsDataURL(file);
+      });
+    }
+
     return new Promise(function(resolve) {
       var reader = new FileReader();
       reader.onload = function(e) { resolve(e.target.result); };
       reader.onerror = function() { resolve("[Erreur lecture: " + file.name + "]"); };
-      if (file.type === "application/pdf") {
-        resolve("[PDF: " + file.name + " — contenu non extractible directement, décris son contenu]");
-      } else {
-        reader.readAsText(file, "UTF-8");
-      }
+      reader.readAsText(file, "UTF-8");
     });
   }
 
