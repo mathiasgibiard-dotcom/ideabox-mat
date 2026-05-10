@@ -559,8 +559,20 @@ export default function App() {
             <div style={{ background: "#020d0a", border: "1px solid #00ccff22", borderRadius: "6px", padding: "16px", marginBottom: "12px" }}>
               <div style={{ fontSize: "10px", color: "#00ccff88", letterSpacing: "0.15em", marginBottom: "10px" }}>PROMPT POUR CLAUDE</div>
               <p style={{ margin: "0 0 14px", fontSize: "12px", color: "#88ccdd", lineHeight: "1.7" }}>{idea.prompt}</p>
-              <button onClick={function() { copyPrompt(idea); }} style={{ width: "100%", background: copiedId === idea.id ? "#00ff8815" : "#00ccff0d", border: "1px solid " + (copiedId === idea.id ? "#00ff8844" : "#00ccff33"), borderRadius: "4px", color: copiedId === idea.id ? "#00ff88" : "#00ccff", padding: "10px", cursor: "pointer", fontSize: "12px", fontWeight: "700", letterSpacing: "0.08em", transition: "all 0.2s" }}>
+              <button onClick={function() { copyPrompt(idea); }} style={{ width: "100%", background: copiedId === idea.id ? "#00ff8815" : "#00ccff0d", border: "1px solid " + (copiedId === idea.id ? "#00ff8844" : "#00ccff33"), borderRadius: "4px", color: copiedId === idea.id ? "#00ff88" : "#00ccff", padding: "10px", cursor: "pointer", fontSize: "12px", fontWeight: "700", letterSpacing: "0.08em", transition: "all 0.2s", marginBottom: "8px" }}>
                 {copiedId === idea.id ? "COPIE ! COLLE DANS CLAUDE" : "COPIER LE PROMPT"}
+              </button>
+              <button onClick={function() {
+                var guidedPrompt = idea.prompt + "
+
+---
+
+IMPORTANT : Guide-moi etape par etape dans la creation de ce projet. Commence par me poser 3-5 questions pour affiner le besoin, puis propose une architecture et attend ma validation, puis developpe module par module en attendant ma confirmation a chaque etape.";
+                navigator.clipboard.writeText(guidedPrompt).then(function() {
+                  showToast("Mode guide copie — colle dans Claude !");
+                });
+              }} style={{ width: "100%", background: "rgba(255,165,0,0.08)", border: "1px solid rgba(255,165,0,0.4)", borderRadius: "4px", color: "#ffaa44", padding: "10px", cursor: "pointer", fontSize: "12px", fontWeight: "700", letterSpacing: "0.08em", textShadow: "0 0 10px #ffaa4466", transition: "all 0.2s" }}>
+                Naviguer MODE GUIDE — CREATION ETAPE PAR ETAPE
               </button>
             </div>
           )}
