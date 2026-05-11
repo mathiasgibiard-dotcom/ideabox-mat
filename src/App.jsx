@@ -406,8 +406,10 @@ export default function App() {
       return insertIdea(idea).then(function(saved) {
         var finalIdea = saved || idea;
         // Uploader les fichiers en attente
-        var uploads = pendingFiles.map(function(f) { return uploadFile(finalIdea.id, f); });
-        Promise.all(uploads).then(function() { setPendingFiles([]); });
+        if (pendingFiles.length > 0) {
+          uploadFiles(finalIdea.id, pendingFiles);
+          setPendingFiles([]);
+        }
         setRawInput("");
         setActiveIdea(finalIdea);
         setScreen("idea_detail");
@@ -440,8 +442,10 @@ export default function App() {
     };
     insertIdea(idea).then(function(saved) {
       var finalIdea = saved || idea;
-      var uploads = pendingFiles.map(function(f) { return uploadFile(finalIdea.id, f); });
-      Promise.all(uploads).then(function() { setPendingFiles([]); });
+      if (pendingFiles.length > 0) {
+        uploadFiles(finalIdea.id, pendingFiles);
+        setPendingFiles([]);
+      }
       setRawInput("");
       setActiveIdea(finalIdea);
       setScreen("idea_detail");
@@ -491,7 +495,7 @@ export default function App() {
       "## Fonctionnalités\n" + (idea.fonctionnalites || []).map(function(f) { return "- " + f; }).join("\n") + "\n\n" +
       "## Prompt pour Claude\n" + (idea.prompt || "") + "\n\n" +
       "## Idée originale\n" + (idea.raw || "");
-    var baseName = idea.titre.replace(/[^a-zA-Z0-9]/g, "_").slice(0, 40);
+    var baseName = idea.titre.replace(/\.[^.]+$/, "").replace(/[^a-zA-Z0-9]/g, "_").slice(0, 40);
     if (format === "md") {
       var blob = new Blob([content], { type: "text/markdown;charset=utf-8" });
       var url = URL.createObjectURL(blob); var a = document.createElement("a"); a.href = url; a.download = baseName + ".md"; a.click(); URL.revokeObjectURL(url);
@@ -515,7 +519,7 @@ export default function App() {
   }
 
   function downloadPreview(idea, html) {
-    var baseName = idea.titre.replace(/[^a-zA-Z0-9]/g, "_").slice(0, 40);
+    var baseName = idea.titre.replace(/\.[^.]+$/, "").replace(/[^a-zA-Z0-9]/g, "_").slice(0, 40);
     var blob = new Blob([html], { type: "text/html;charset=utf-8" });
     var url = URL.createObjectURL(blob); var a = document.createElement("a"); a.href = url; a.download = baseName + "_apercu.html"; a.click(); URL.revokeObjectURL(url);
     showToast("Apercu telecharge !");
@@ -695,17 +699,28 @@ export default function App() {
   function uploadFile(ideaId, file) {
     setIsUploading(true);
     var path = ideaId + "/" + Date.now() + "_" + file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
-    fetch(SUPABASE_URL + "/storage/v1/object/idea-files/" + path, {
+    return fetch(SUPABASE_URL + "/storage/v1/object/idea-files/" + path, {
       method: "POST",
       headers: { "apikey": SUPABASE_KEY, "Authorization": "Bearer " + SUPABASE_KEY, "Content-Type": file.type || "application/octet-stream" },
       body: file,
     }).then(function(r) { return r.json(); }).then(function() {
+      return true;
+    }).catch(function() {
+      return false;
+    });
+  }
+
+  function uploadFiles(ideaId, files) {
+    setIsUploading(true);
+    var promises = files.map(function(f) { return uploadFile(ideaId, f); });
+    Promise.all(promises).then(function() {
       setIsUploading(false);
-      showToast("Fichier ajoute !");
+      showToast(files.length > 1 ? files.length + " fichiers ajoutes !" : "Fichier ajoute !");
       loadFiles(ideaId);
     }).catch(function() {
       setIsUploading(false);
       showToast("Erreur upload", "err");
+      loadFiles(ideaId);
     });
   }
 
@@ -1130,7 +1145,7 @@ export default function App() {
                     <span style={{ background: "#00ff88", color: "#020e06", borderRadius: "50%", width: "16px", height: "16px", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "9px", fontWeight: "900", flexShrink: 0 }}>{(ideaFiles[idea.id] || []).length}</span>
                   )}
                 </button>
-                <input ref={fileInputRef} type="file" multiple accept="*/*" style={{ display: "none" }} onChange={function(e) { var files = Array.from(e.target.files); files.forEach(function(f) { uploadFile(idea.id, f); }); e.target.value = ""; }}/>
+                <input ref={fileInputRef} type="file" multiple accept="*/*" style={{ display: "none" }} onChange={function(e) { var files = Array.from(e.target.files); uploadFiles(idea.id, files); e.target.value = ""; }}/>
                 {!isEditing ? (
                   <button onClick={function() { setEditMode(true); setEditingId(idea.id); setEditText(idea.raw || ""); }} style={{ background: fc + "18", border: "1px solid " + fc + "55", borderRadius: "4px", color: fc, padding: "6px 14px", cursor: "pointer", fontSize: "11px", fontWeight: "700", letterSpacing: "0.08em", textShadow: "0 0 8px " + fc }}>
                     MODIFIER
