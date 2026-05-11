@@ -216,6 +216,18 @@ export default function App() {
   var isGeneratingPreview = genPreviewState[0];
   var setIsGeneratingPreview = genPreviewState[1];
 
+  var previewVersionsState = useState([]);
+  var previewVersions = previewVersionsState[0];
+  var setPreviewVersions = previewVersionsState[1];
+
+  var activeVersionState = useState(null);
+  var activeVersion = activeVersionState[0];
+  var setActiveVersion = activeVersionState[1];
+
+  var showGalleryState = useState(false);
+  var showGallery = showGalleryState[0];
+  var setShowGallery = showGalleryState[1];
+
   // Gestionnaire documentaire
   var docsState = useState([]);
   var uploadedDocs = docsState[0];
@@ -546,6 +558,10 @@ export default function App() {
       html = html.replace(/```html/gi, "").replace(/```/g, "").trim();
       setPreviewHtml(html);
       setIsGeneratingPreview(false);
+      // Sauvegarder dans la galerie
+      var version = { id: Date.now(), html: html, date: new Date().toLocaleTimeString("fr-FR"), label: "Version " + (previewVersions.length + 1), starred: false };
+      setPreviewVersions(function(prev) { return [version].concat(prev).slice(0, 10); }); // max 10 versions
+      setActiveVersion(version.id);
     }).catch(function() {
       showToast("Erreur generation apercu", "err");
       setIsGeneratingPreview(false);
@@ -1399,24 +1415,55 @@ export default function App() {
         {/* Modal Apercu Visuel */}
         {previewHtml && (
           <div style={{ position: "fixed", inset: 0, zIndex: 200, background: "rgba(2,8,4,0.97)", display: "flex", flexDirection: "column" }}>
-            <div style={{ background: "rgba(3,10,5,0.99)", borderBottom: "1px solid #cc88ff33", padding: "12px 16px", display: "flex", alignItems: "center", justifyContent: "space-between", flexShrink: 0 }}>
+            {/* Header */}
+            <div style={{ background: "rgba(3,10,5,0.99)", borderBottom: "1px solid #cc88ff33", padding: "10px 16px", display: "flex", alignItems: "center", justifyContent: "space-between", flexShrink: 0 }}>
               <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                <span style={{ fontSize: "14px", color: "#cc88ff", fontWeight: "700", letterSpacing: "0.1em", textShadow: "0 0 14px #cc88ff" }}>🖥 APERCU INTERFACE</span>
-                <span style={{ fontSize: "10px", color: "#88bbaa", letterSpacing: "0.08em" }}>{idea.titre}</span>
+                <span style={{ fontSize: "13px", color: "#cc88ff", fontWeight: "700", letterSpacing: "0.1em", textShadow: "0 0 14px #cc88ff" }}>🖥 APERCU</span>
+                <span style={{ fontSize: "10px", color: "#88bbaa" }}>{idea.titre}</span>
+                {previewVersions.length > 0 && <span style={{ fontSize: "9px", background: "#cc88ff22", border: "1px solid #cc88ff44", borderRadius: "10px", color: "#cc88ff", padding: "2px 8px" }}>{previewVersions.length} VERSION{previewVersions.length > 1 ? "S" : ""}</span>}
               </div>
-              <div style={{ display: "flex", gap: "8px" }}>
-                <button onClick={function() { generatePreview(idea); }} disabled={isGeneratingPreview} style={{ background: "transparent", border: "1px solid #cc88ff44", borderRadius: "4px", color: "#cc88ff88", padding: "6px 12px", cursor: "pointer", fontSize: "10px", letterSpacing: "0.06em" }}>
-                  {isGeneratingPreview ? "..." : "⟳ REGENERER"}
+              <div style={{ display: "flex", gap: "6px" }}>
+                <button onClick={function() { generatePreview(idea); }} disabled={isGeneratingPreview} style={{ background: "transparent", border: "1px solid #cc88ff44", borderRadius: "4px", color: "#cc88ff88", padding: "5px 10px", cursor: "pointer", fontSize: "10px" }}>
+                  {isGeneratingPreview ? "..." : "⟳ NOUVELLE"}
                 </button>
-                {previewHtml && previewHtml !== "loading" && (
-                  <button onClick={function() { downloadPreview(idea, previewHtml); }} style={{ background: "rgba(180,0,255,0.08)", border: "1px solid #cc88ff44", borderRadius: "4px", color: "#cc88ff88", padding: "6px 12px", cursor: "pointer", fontSize: "10px" }}>⬇ HTML</button>
+                {previewVersions.length > 1 && (
+                  <button onClick={function() { setShowGallery(function(v) { return !v; }); }} style={{ background: showGallery ? "#cc88ff22" : "transparent", border: "1px solid #cc88ff44", borderRadius: "4px", color: "#cc88ff", padding: "5px 10px", cursor: "pointer", fontSize: "10px", fontWeight: "700" }}>
+                    🗂 GALERIE
+                  </button>
                 )}
                 {previewHtml && previewHtml !== "loading" && (
-                  <button onClick={function() { var blob = new Blob([previewHtml], { type: "text/html" }); var url = URL.createObjectURL(blob); window.open(url, "_blank"); }} style={{ background: "rgba(180,0,255,0.08)", border: "1px solid #cc88ff44", borderRadius: "4px", color: "#cc88ff", padding: "6px 12px", cursor: "pointer", fontSize: "10px", fontWeight: "700" }}>🔗 OUVRIR</button>
+                  <button onClick={function() { var blob = new Blob([previewHtml], { type: "text/html" }); var url = URL.createObjectURL(blob); window.open(url, "_blank"); }} style={{ background: "rgba(180,0,255,0.08)", border: "1px solid #cc88ff44", borderRadius: "4px", color: "#cc88ff", padding: "5px 10px", cursor: "pointer", fontSize: "10px", fontWeight: "700" }}>🔗 OUVRIR</button>
                 )}
-                <button onClick={function() { setPreviewHtml(null); }} style={{ background: "transparent", border: "1px solid #ff446644", borderRadius: "4px", color: "#ff8899", padding: "6px 12px", cursor: "pointer", fontSize: "12px" }}>✕ FERMER</button>
+                {previewHtml && previewHtml !== "loading" && (
+                  <button onClick={function() { downloadPreview(idea, previewHtml); }} style={{ background: "transparent", border: "1px solid #cc88ff33", borderRadius: "4px", color: "#cc88ff77", padding: "5px 10px", cursor: "pointer", fontSize: "10px" }}>⬇</button>
+                )}
+                <button onClick={function() { setPreviewHtml(null); setShowGallery(false); }} style={{ background: "transparent", border: "1px solid #ff446644", borderRadius: "4px", color: "#ff8899", padding: "5px 10px", cursor: "pointer", fontSize: "12px" }}>✕</button>
               </div>
             </div>
+
+            {/* Galerie de versions */}
+            {showGallery && previewVersions.length > 1 && (
+              <div style={{ background: "rgba(3,10,5,0.98)", borderBottom: "1px solid #cc88ff22", padding: "10px 16px", display: "flex", gap: "10px", overflowX: "auto", flexShrink: 0 }}>
+                {previewVersions.map(function(v) {
+                  var isActive = activeVersion === v.id;
+                  return (
+                    <div key={v.id} style={{ flexShrink: 0, cursor: "pointer" }} onClick={function() { setPreviewHtml(v.html); setActiveVersion(v.id); }}>
+                      <div style={{ width: "80px", height: "120px", borderRadius: "6px", overflow: "hidden", border: "2px solid " + (isActive ? "#cc88ff" : "#cc88ff22"), boxShadow: isActive ? "0 0 12px #cc88ff55" : "none", transition: "all 0.2s", position: "relative" }}>
+                        <iframe srcDoc={v.html} style={{ width: "375px", height: "700px", border: "none", transform: "scale(0.213)", transformOrigin: "top left", pointerEvents: "none" }} sandbox="allow-scripts" title={"v" + v.id}/>
+                        {v.starred && <span style={{ position: "absolute", top: "2px", right: "2px", fontSize: "10px" }}>⭐</span>}
+                      </div>
+                      <div style={{ fontSize: "8px", color: isActive ? "#cc88ff" : "#556655", textAlign: "center", marginTop: "4px", letterSpacing: "0.04em" }}>{v.label}</div>
+                      <div style={{ display: "flex", gap: "3px", justifyContent: "center", marginTop: "2px" }}>
+                        <button onClick={function(e) { e.stopPropagation(); setPreviewVersions(function(prev) { return prev.map(function(x) { return x.id === v.id ? Object.assign({}, x, { starred: !x.starred, label: !x.starred ? "⭐ Favorite" : "Version " + prev.indexOf(x)+1 }) : x; }); }); }} style={{ background: "transparent", border: "none", color: v.starred ? "#ffcc00" : "#445544", cursor: "pointer", fontSize: "10px", padding: "0" }}>⭐</button>
+                        <button onClick={function(e) { e.stopPropagation(); setPreviewVersions(function(prev) { return prev.filter(function(x) { return x.id !== v.id; }); }); if (activeVersion === v.id && previewVersions.length > 1) { var next = previewVersions.find(function(x) { return x.id !== v.id; }); if (next) { setPreviewHtml(next.html); setActiveVersion(next.id); } } }} style={{ background: "transparent", border: "none", color: "#ff4466", cursor: "pointer", fontSize: "10px", padding: "0" }}>🗑</button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            {/* Apercu principal */}
             <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", padding: "20px", overflow: "hidden" }}>
               {previewHtml === "loading" ? (
                 <div style={{ textAlign: "center" }}>
