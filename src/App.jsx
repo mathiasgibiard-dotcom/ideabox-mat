@@ -243,6 +243,14 @@ export default function App() {
   var showDownloadMenu = showDownloadMenuState[0];
   var setShowDownloadMenu = showDownloadMenuState[1];
 
+  var savedDocsState = useState([]);
+  var savedDocs = savedDocsState[0];
+  var setSavedDocs = savedDocsState[1];
+
+  var docTabState = useState("analyser"); // "analyser" | "sauvegardes"
+  var docTab = docTabState[0];
+  var setDocTab = docTabState[1];
+
   var ideaExpandedState = useState(null); // null | "fonctions" | "prompt"
   var ideaExpanded = ideaExpandedState[0];
   var setIdeaExpanded = ideaExpandedState[1];
@@ -266,10 +274,16 @@ export default function App() {
   useEffect(function() { loadIdeas(); }, []); // eslint-disable-line
 
   useEffect(function() {
-    if (screen === "idea_detail" && activeIdea) {
-      loadFiles(activeIdea.id);
-    }
+    if (screen === "idea_detail" && activeIdea) loadFiles(activeIdea.id);
   }, [screen, activeIdea]); // eslint-disable-line
+
+  useEffect(function() {
+    if (screen === "docs") loadSavedDocs();
+  }, [screen]); // eslint-disable-line
+
+  useEffect(function() {
+    if (screen === "docs") loadSavedDocs();
+  }, [screen]); // eslint-disable-line
 
   useEffect(function() {
     if (screen === "input" && inputRef.current) {
@@ -621,6 +635,36 @@ export default function App() {
     setShowDownloadMenu(false);
   }
 
+  function saveDocResult() {
+    if (!docResult) return;
+    var modeLabels = { resumer: "Résumé", analyser: "Analyse", restructurer: "Document restructuré" };
+    var doc = {
+      id: Date.now(),
+      titre: modeLabels[docMode] + " — " + new Date().toLocaleDateString("fr-FR"),
+      mode: docMode,
+      contenu: docResult,
+      date: new Date().toLocaleDateString("fr-FR"),
+      ts: Date.now(),
+    };
+    sbFetch("saved_docs", "POST", doc).then(function() {
+      showToast("Document sauvegardé !");
+      loadSavedDocs();
+    }).catch(function() { showToast("Erreur sauvegarde", "err"); });
+  }
+
+  function loadSavedDocs() {
+    sbFetch("saved_docs?select=*&order=ts.desc").then(function(data) {
+      if (Array.isArray(data)) setSavedDocs(data);
+    }).catch(function() {});
+  }
+
+  function deleteSavedDoc(id) {
+    sbFetch("saved_docs?id=eq." + id, "DELETE").then(function() {
+      setSavedDocs(function(prev) { return prev.filter(function(d) { return d.id !== id; }); });
+      showToast("Document supprimé");
+    }).catch(function() { showToast("Erreur suppression", "err"); });
+  }
+
   function renderMarkdown(text) {
     return text
       .replace(/^### (.+)$/gm, "<h3 style='color:#00aaff;font-size:13px;margin:14px 0 6px;letter-spacing:0.08em'>$1</h3>")
@@ -743,12 +787,17 @@ export default function App() {
       <BG/><Header back={true} backLabel="ACCUEIL" backAction={function() { setScreen("home"); }}/>
       <div style={{ padding: "16px", maxWidth: "700px", margin: "0 auto", position: "relative", zIndex: 1 }}>
 
-        {/* Titre */}
+        {/* Titre + onglets */}
         <div style={{ marginBottom: "16px" }}>
-          <div style={{ fontSize: "16px", fontWeight: "700", color: "#00aaff", textShadow: "0 0 20px #00aaff, 0 0 40px #00aaff66", letterSpacing: "0.08em", marginBottom: "4px" }}>📄 GESTIONNAIRE DOCS</div>
-          <div style={{ fontSize: "10px", color: "#88bbaa", letterSpacing: "0.12em" }}>RESUME · ANALYSE · RESTRUCTURE · TELECHARGE</div>
+          <div style={{ fontSize: "16px", fontWeight: "700", color: "#00aaff", textShadow: "0 0 20px #00aaff, 0 0 40px #00aaff66", letterSpacing: "0.08em", marginBottom: "10px" }}>📄 GESTIONNAIRE DOCS</div>
+          <div style={{ display: "flex", gap: "6px" }}>
+            <button onClick={function() { setDocTab("analyser"); }} style={{ flex: 1, background: docTab === "analyser" ? "rgba(0,170,255,0.1)" : "transparent", border: "1px solid " + (docTab === "analyser" ? "#00aaff55" : "#00aaff15"), borderRadius: "5px", color: docTab === "analyser" ? "#00aaff" : "#88bbaa", padding: "8px", cursor: "pointer", fontSize: "11px", fontWeight: "700", letterSpacing: "0.06em" }}>⚡ ANALYSER</button>
+            <button onClick={function() { setDocTab("sauvegardes"); loadSavedDocs(); }} style={{ flex: 1, background: docTab === "sauvegardes" ? "rgba(0,170,255,0.1)" : "transparent", border: "1px solid " + (docTab === "sauvegardes" ? "#00aaff55" : "#00aaff15"), borderRadius: "5px", color: docTab === "sauvegardes" ? "#00aaff" : "#88bbaa", padding: "8px", cursor: "pointer", fontSize: "11px", fontWeight: "700", letterSpacing: "0.06em" }}>💾 SAUVEGARDES {savedDocs.length > 0 ? "(" + savedDocs.length + ")" : ""}</button>
+          </div>
         </div>
 
+        {docTab === "analyser" && (
+        <div>
         {/* Modes */}
         <div style={{ display: "flex", gap: "6px", marginBottom: "14px" }}>
           {[
@@ -832,6 +881,7 @@ export default function App() {
               <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
                 <button onClick={function() { setDocExpanded(true); }} style={{ background: "transparent", border: "1px solid #00aaff33", borderRadius: "3px", color: "#00aaff88", padding: "4px 10px", cursor: "pointer", fontSize: "10px" }}>⛶ AGRANDIR</button>
                 <button onClick={function() { navigator.clipboard.writeText(docResult); showToast("Copie !"); }} style={{ background: "transparent", border: "1px solid #00aaff33", borderRadius: "3px", color: "#00aaff88", padding: "4px 10px", cursor: "pointer", fontSize: "10px" }}>COPIER</button>
+                <button onClick={saveDocResult} style={{ background: "rgba(0,255,136,0.08)", border: "1px solid #00ff8844", borderRadius: "3px", color: "#00ff88", padding: "4px 10px", cursor: "pointer", fontSize: "10px", fontWeight: "700" }}>💾 SAUV.</button>
                 <div style={{ position: "relative" }}>
                   <button onClick={function() { setShowDownloadMenu(function(v) { return !v; }); }} style={{ background: "rgba(0,170,255,0.1)", border: "1px solid #00aaff55", borderRadius: "3px", color: "#00aaff", padding: "4px 10px", cursor: "pointer", fontSize: "10px", fontWeight: "700" }}>⬇ FORMAT ▾</button>
                   {showDownloadMenu && (
@@ -845,6 +895,42 @@ export default function App() {
               </div>
             </div>
             <div style={{ fontSize: "12px", color: "#99ccaa", lineHeight: "1.8", maxHeight: "400px", overflowY: "auto" }} dangerouslySetInnerHTML={{ __html: renderMarkdown(docResult) }}/>
+          </div>
+        )}
+
+        )} {/* fin docTab analyser */}
+
+        {docTab === "sauvegardes" && (
+          <div>
+            {savedDocs.length === 0 ? (
+              <div style={{ textAlign: "center", padding: "48px 0", color: "#334433", fontSize: "12px", letterSpacing: "0.12em" }}>
+                <div style={{ fontSize: "32px", marginBottom: "12px", opacity: 0.3 }}>💾</div>
+                AUCUN DOCUMENT SAUVEGARDE
+              </div>
+            ) : (
+              <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                {savedDocs.map(function(doc) {
+                  return (
+                    <div key={doc.id} style={{ background: "rgba(2,14,8,0.9)", border: "1px solid #00aaff15", borderRadius: "6px", padding: "14px" }}>
+                      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "8px" }}>
+                        <div>
+                          <div style={{ fontSize: "12px", color: "#aaccdd", fontWeight: "700" }}>{doc.titre}</div>
+                          <div style={{ fontSize: "9px", color: "#445566", marginTop: "2px", letterSpacing: "0.08em" }}>{doc.date} · {doc.mode === "resumer" ? "RÉSUMÉ" : doc.mode === "analyser" ? "ANALYSE" : "RESTRUCTURÉ"}</div>
+                        </div>
+                        <div style={{ display: "flex", gap: "6px" }}>
+                          <button onClick={function() { setDocResult(doc.contenu); setDocExpanded(true); setDocTab("analyser"); }} style={{ background: "transparent", border: "1px solid #00aaff33", borderRadius: "3px", color: "#00aaff77", padding: "4px 8px", cursor: "pointer", fontSize: "10px" }}>👁 VOIR</button>
+                          <button onClick={function() { navigator.clipboard.writeText(doc.contenu); showToast("Copié !"); }} style={{ background: "transparent", border: "1px solid #00aaff22", borderRadius: "3px", color: "#00aaff55", padding: "4px 8px", cursor: "pointer", fontSize: "10px" }}>COPIER</button>
+                          <button onClick={function() { deleteSavedDoc(doc.id); }} style={{ background: "transparent", border: "1px solid #ff446633", borderRadius: "3px", color: "#ff6677", padding: "4px 8px", cursor: "pointer", fontSize: "11px" }}>🗑</button>
+                        </div>
+                      </div>
+                      <div style={{ fontSize: "11px", color: "#556655", lineHeight: "1.5", maxHeight: "60px", overflow: "hidden", WebkitMaskImage: "linear-gradient(to bottom, black 60%, transparent)" }}>
+                        {doc.contenu.replace(/#{1,3} /g, "").replace(/\*\*/g, "").slice(0, 200)}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
         )}
 
