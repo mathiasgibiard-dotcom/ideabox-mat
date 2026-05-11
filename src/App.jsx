@@ -243,6 +243,14 @@ export default function App() {
   var showDownloadMenu = showDownloadMenuState[0];
   var setShowDownloadMenu = showDownloadMenuState[1];
 
+  var ideaExpandedState = useState(null); // null | "fonctions" | "prompt"
+  var ideaExpanded = ideaExpandedState[0];
+  var setIdeaExpanded = ideaExpandedState[1];
+
+  var showIdeaDownloadState = useState(false);
+  var showIdeaDownload = showIdeaDownloadState[0];
+  var setShowIdeaDownload = showIdeaDownloadState[1];
+
   var recognitionRef = useRef(null);
   var inputRef = useRef(null);
   var editRef = useRef(null);
@@ -456,6 +464,43 @@ export default function App() {
       setCopiedId(idea.id); showToast("Prompt copie !");
       setTimeout(function() { setCopiedId(null); }, 2500);
     });
+  }
+
+  function downloadIdea(idea, format) {
+    var content = "# " + idea.titre + "\n\n" +
+      "**Type :** " + idea.folder + " | **Statut :** " + idea.status + " | **Date :** " + idea.date + "\n\n" +
+      "## Concept\n" + (idea.concept || "") + "\n\n" +
+      "## Fonctionnalités\n" + (idea.fonctionnalites || []).map(function(f) { return "- " + f; }).join("\n") + "\n\n" +
+      "## Prompt pour Claude\n" + (idea.prompt || "") + "\n\n" +
+      "## Idée originale\n" + (idea.raw || "");
+    var baseName = idea.titre.replace(/[^a-zA-Z0-9]/g, "_").slice(0, 40);
+    if (format === "md") {
+      var blob = new Blob([content], { type: "text/markdown;charset=utf-8" });
+      var url = URL.createObjectURL(blob); var a = document.createElement("a"); a.href = url; a.download = baseName + ".md"; a.click(); URL.revokeObjectURL(url);
+    } else if (format === "txt") {
+      var plain = content.replace(/#{1,3} /g, "").replace(/\*\*/g, "");
+      var blob2 = new Blob([plain], { type: "text/plain;charset=utf-8" });
+      var url2 = URL.createObjectURL(blob2); var a2 = document.createElement("a"); a2.href = url2; a2.download = baseName + ".txt"; a2.click(); URL.revokeObjectURL(url2);
+    } else if (format === "html") {
+      var html = "<!DOCTYPE html><html><head><meta charset='utf-8'><style>body{font-family:Arial,sans-serif;max-width:800px;margin:40px auto;padding:20px;color:#222;line-height:1.7}h1{color:#006644}h2{color:#1a5276;border-bottom:1px solid #eee;padding-bottom:6px}ul{padding-left:20px}</style></head><body>" +
+        "<h1>" + idea.titre + "</h1><p><strong>Type :</strong> " + idea.folder + " &nbsp;|&nbsp; <strong>Statut :</strong> " + idea.status + " &nbsp;|&nbsp; <strong>Date :</strong> " + idea.date + "</p>" +
+        "<h2>Concept</h2><p>" + (idea.concept || "") + "</p>" +
+        "<h2>Fonctionnalités</h2><ul>" + (idea.fonctionnalites || []).map(function(f) { return "<li>" + f + "</li>"; }).join("") + "</ul>" +
+        "<h2>Prompt pour Claude</h2><pre style='background:#f5f5f5;padding:16px;border-radius:6px;white-space:pre-wrap'>" + (idea.prompt || "") + "</pre>" +
+        "<h2>Idée originale</h2><p><em>" + (idea.raw || "") + "</em></p>" +
+        "</body></html>";
+      var blob3 = new Blob([html], { type: "text/html;charset=utf-8" });
+      var url3 = URL.createObjectURL(blob3); var a3 = document.createElement("a"); a3.href = url3; a3.download = baseName + ".html"; a3.click(); URL.revokeObjectURL(url3);
+    }
+    setShowIdeaDownload(false);
+    showToast("Fiche telechargee !");
+  }
+
+  function downloadPreview(idea, html) {
+    var baseName = idea.titre.replace(/[^a-zA-Z0-9]/g, "_").slice(0, 40);
+    var blob = new Blob([html], { type: "text/html;charset=utf-8" });
+    var url = URL.createObjectURL(blob); var a = document.createElement("a"); a.href = url; a.download = baseName + "_apercu.html"; a.click(); URL.revokeObjectURL(url);
+    showToast("Apercu telecharge !");
   }
 
   function generatePreview(idea) {
@@ -1032,7 +1077,22 @@ export default function App() {
 
           {/* Fonctionnalites */}
           <div style={{ background: "rgba(2,14,8,0.9)", border: "1px solid #00ff8815", borderRadius: "6px", padding: "16px", marginBottom: "12px" }}>
-            <div style={{ fontSize: "10px", color: "#88bbaa", letterSpacing: "0.15em", marginBottom: "10px" }}>FONCTIONNALITES</div>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "10px" }}>
+              <div style={{ fontSize: "10px", color: "#88bbaa", letterSpacing: "0.15em" }}>FONCTIONNALITES</div>
+              <div style={{ display: "flex", gap: "6px" }}>
+                <button onClick={function() { setIdeaExpanded("fonctions"); }} style={{ background: "transparent", border: "1px solid " + fc + "33", borderRadius: "3px", color: fc + "77", padding: "3px 8px", cursor: "pointer", fontSize: "9px" }}>⛶ AGRANDIR</button>
+                <div style={{ position: "relative" }}>
+                  <button onClick={function() { setShowIdeaDownload(function(v) { return !v; }); }} style={{ background: "transparent", border: "1px solid " + fc + "33", borderRadius: "3px", color: fc + "77", padding: "3px 8px", cursor: "pointer", fontSize: "9px" }}>⬇ FORMAT</button>
+                  {showIdeaDownload && (
+                    <div style={{ position: "absolute", right: 0, top: "110%", background: "#020e06", border: "1px solid #00ff8822", borderRadius: "4px", zIndex: 50, minWidth: "120px", overflow: "hidden" }}>
+                      {[{f:"md",label:"📝 Markdown"},{f:"txt",label:"📄 Texte"},{f:"html",label:"🌐 HTML"}].map(function(item) {
+                        return <button key={item.f} onClick={function() { downloadIdea(idea, item.f); }} style={{ display: "block", width: "100%", background: "transparent", border: "none", borderBottom: "1px solid #00ff8811", color: "#aaccaa", padding: "8px 14px", cursor: "pointer", fontSize: "11px", textAlign: "left", fontFamily: "inherit" }}>{item.label}</button>;
+                      })}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
             {foncs.map(function(ft, i) {
               return <div key={i} style={{ display: "flex", gap: "10px", padding: "6px 0", borderBottom: i < foncs.length - 1 ? "1px solid #00ff8810" : "none", fontSize: "13px", color: "#99ccaa" }}>
                 <span style={{ color: fc, flexShrink: 0 }}>{">"}</span>{ft}
@@ -1043,7 +1103,10 @@ export default function App() {
           {/* Prompt */}
           {idea.prompt && (
             <div style={{ background: "#020d0a", border: "1px solid #00ccff22", borderRadius: "6px", padding: "16px", marginBottom: "12px" }}>
-              <div style={{ fontSize: "10px", color: "#00ccff88", letterSpacing: "0.15em", marginBottom: "10px" }}>PROMPT POUR CLAUDE</div>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "10px" }}>
+                <div style={{ fontSize: "10px", color: "#00ccff88", letterSpacing: "0.15em" }}>PROMPT POUR CLAUDE</div>
+                <button onClick={function() { setIdeaExpanded("prompt"); }} style={{ background: "transparent", border: "1px solid #00ccff33", borderRadius: "3px", color: "#00ccff77", padding: "3px 8px", cursor: "pointer", fontSize: "9px" }}>⛶ AGRANDIR</button>
+              </div>
               <p style={{ margin: "0 0 14px", fontSize: "12px", color: "#88ccdd", lineHeight: "1.7" }}>{idea.prompt}</p>
               <button onClick={function() { copyPrompt(idea); }} style={{ width: "100%", background: copiedId === idea.id ? "#00ff8815" : "#00ccff0d", border: "1px solid " + (copiedId === idea.id ? "#00ff8844" : "#00ccff33"), borderRadius: "4px", color: copiedId === idea.id ? "#00ff88" : "#00ccff", padding: "10px", cursor: "pointer", fontSize: "12px", fontWeight: "700", letterSpacing: "0.08em", transition: "all 0.2s", marginBottom: "8px" }}>
                 {copiedId === idea.id ? "COPIE ! COLLE DANS CLAUDE" : "COPIER LE PROMPT"}
@@ -1104,6 +1167,46 @@ export default function App() {
           </div>
         </div>
 
+        {/* Modal plein écran fiche idée */}
+        {ideaExpanded && (
+          <div style={{ position: "fixed", inset: 0, zIndex: 200, background: "rgba(2,8,4,0.98)", display: "flex", flexDirection: "column" }}>
+            <div style={{ background: "rgba(3,10,5,0.99)", borderBottom: "1px solid " + fc + "33", padding: "12px 16px", display: "flex", alignItems: "center", justifyContent: "space-between", flexShrink: 0 }}>
+              <span style={{ fontSize: "13px", color: fc, fontWeight: "700", letterSpacing: "0.1em" }}>
+                {ideaExpanded === "fonctions" ? "FONCTIONNALITES — " + idea.titre : "PROMPT — " + idea.titre}
+              </span>
+              <div style={{ display: "flex", gap: "8px" }}>
+                {ideaExpanded === "prompt" && (
+                  <button onClick={function() { copyPrompt(idea); }} style={{ background: "transparent", border: "1px solid #00ccff33", borderRadius: "4px", color: "#00ccff88", padding: "6px 12px", cursor: "pointer", fontSize: "10px" }}>COPIER</button>
+                )}
+                <div style={{ position: "relative" }}>
+                  <button onClick={function() { setShowIdeaDownload(function(v) { return !v; }); }} style={{ background: "rgba(0,255,136,0.08)", border: "1px solid " + fc + "44", borderRadius: "4px", color: fc, padding: "6px 12px", cursor: "pointer", fontSize: "10px", fontWeight: "700" }}>⬇ FORMAT ▾</button>
+                  {showIdeaDownload && (
+                    <div style={{ position: "absolute", right: 0, top: "110%", background: "#020e06", border: "1px solid #00ff8822", borderRadius: "4px", zIndex: 50, minWidth: "130px", overflow: "hidden" }}>
+                      {[{f:"md",label:"📝 Markdown"},{f:"txt",label:"📄 Texte .txt"},{f:"html",label:"🌐 HTML"}].map(function(item) {
+                        return <button key={item.f} onClick={function() { downloadIdea(idea, item.f); }} style={{ display: "block", width: "100%", background: "transparent", border: "none", borderBottom: "1px solid #00ff8811", color: "#aaccaa", padding: "9px 14px", cursor: "pointer", fontSize: "11px", textAlign: "left", fontFamily: "inherit" }}>{item.label}</button>;
+                      })}
+                    </div>
+                  )}
+                </div>
+                <button onClick={function() { setIdeaExpanded(null); setShowIdeaDownload(false); }} style={{ background: "transparent", border: "1px solid #ff446644", borderRadius: "4px", color: "#ff8899", padding: "6px 12px", cursor: "pointer", fontSize: "12px" }}>✕ FERMER</button>
+              </div>
+            </div>
+            <div style={{ flex: 1, overflowY: "auto", padding: "24px", maxWidth: "800px", margin: "0 auto", width: "100%" }}>
+              {ideaExpanded === "fonctions" ? (
+                <div>
+                  {foncs.map(function(ft, i) {
+                    return <div key={i} style={{ display: "flex", gap: "12px", padding: "12px 0", borderBottom: i < foncs.length - 1 ? "1px solid #00ff8815" : "none", fontSize: "15px", color: "#99ccaa", lineHeight: "1.6" }}>
+                      <span style={{ color: fc, flexShrink: 0 }}>{">"}</span>{ft}
+                    </div>;
+                  })}
+                </div>
+              ) : (
+                <p style={{ fontSize: "15px", color: "#88ccdd", lineHeight: "1.9", whiteSpace: "pre-wrap" }}>{idea.prompt}</p>
+              )}
+            </div>
+          </div>
+        )}
+
         {/* Modal Apercu Visuel */}
         {previewHtml && (
           <div style={{ position: "fixed", inset: 0, zIndex: 200, background: "rgba(2,8,4,0.97)", display: "flex", flexDirection: "column" }}>
@@ -1116,6 +1219,9 @@ export default function App() {
                 <button onClick={function() { generatePreview(idea); }} disabled={isGeneratingPreview} style={{ background: "transparent", border: "1px solid #cc88ff44", borderRadius: "4px", color: "#cc88ff88", padding: "6px 12px", cursor: "pointer", fontSize: "10px", letterSpacing: "0.06em" }}>
                   {isGeneratingPreview ? "..." : "⟳ REGENERER"}
                 </button>
+                {previewHtml && previewHtml !== "loading" && (
+                  <button onClick={function() { downloadPreview(idea, previewHtml); }} style={{ background: "rgba(180,0,255,0.08)", border: "1px solid #cc88ff44", borderRadius: "4px", color: "#cc88ff88", padding: "6px 12px", cursor: "pointer", fontSize: "10px" }}>⬇ HTML</button>
+                )}
                 <button onClick={function() { setPreviewHtml(null); }} style={{ background: "transparent", border: "1px solid #ff446644", borderRadius: "4px", color: "#ff8899", padding: "6px 12px", cursor: "pointer", fontSize: "12px" }}>✕ FERMER</button>
               </div>
             </div>
