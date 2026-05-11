@@ -278,7 +278,7 @@ export default function App() {
   useEffect(function() { loadIdeas(); }, []); // eslint-disable-line
 
   useEffect(function() {
-    if (screen === "idea_detail" && activeIdea) loadFiles(activeIdea.id);
+    if (screen === "idea_detail" && activeIdea) loadFiles(String(activeIdea.id));
   }, [screen, activeIdea]); // eslint-disable-line
 
   useEffect(function() {
@@ -1116,6 +1116,7 @@ export default function App() {
   // IDEA DETAIL
   if (screen === "idea_detail" && activeIdea) {
     var idea = ideas.find(function(i) { return i.id === activeIdea.id; }) || activeIdea;
+    var ideaKey = String(idea.id);
     var fc = idea.folder_color || idea.folderColor || "#00ff88";
     var sc = STATUS_CONFIG[idea.status] || STATUS_CONFIG["idee"];
     var pc = PRIORITY_CONFIG[idea.priority] || PRIORITY_CONFIG.moyenne;
@@ -1149,12 +1150,12 @@ export default function App() {
               <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
                 <button onClick={function() { if (fileInputRef.current) fileInputRef.current.click(); }} disabled={isUploading} style={{ background: isUploading ? "transparent" : "rgba(0,255,136,0.08)", border: "1px solid #00ff8833", borderRadius: "3px", color: isUploading ? "#88bbaa" : "#00ff88", padding: "4px 10px", cursor: isUploading ? "not-allowed" : "pointer", fontSize: "10px", fontWeight: "700", letterSpacing: "0.06em", display: "flex", alignItems: "center", gap: "6px" }}>
                   {isUploading ? "UPLOAD..." : "📎 FICHIER"}
-                  {!isUploading && (ideaFiles[String(idea.id)] || []).length > 0 && (
-                    <span style={{ background: "#00ff88", color: "#020e06", borderRadius: "50%", width: "16px", height: "16px", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "9px", fontWeight: "900", flexShrink: 0 }}>{(ideaFiles[String(idea.id)] || []).length}</span>
+                  {!isUploading && (ideaFiles[ideaKey] || []).length > 0 && (
+                    <span style={{ background: "#00ff88", color: "#020e06", borderRadius: "50%", width: "16px", height: "16px", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "9px", fontWeight: "900", flexShrink: 0 }}>{(ideaFiles[ideaKey] || []).length}</span>
                   )}
                 </button>
-                <button onClick={function() { loadFiles(idea.id); }} style={{ background: "transparent", border: "1px solid #00ff8820", borderRadius: "3px", color: "#00ff8866", padding: "4px 8px", cursor: "pointer", fontSize: "11px" }} title="Rafraîchir les fichiers">⟳</button>
-                <input ref={fileInputRef} type="file" multiple accept="*/*" style={{ display: "none" }} onChange={function(e) { var files = Array.from(e.target.files); uploadFiles(idea.id, files); e.target.value = ""; }}/>
+                <button onClick={function() { loadFiles(ideaKey); }} style={{ background: "transparent", border: "1px solid #00ff8820", borderRadius: "3px", color: "#00ff8866", padding: "4px 8px", cursor: "pointer", fontSize: "11px" }} title="Rafraîchir les fichiers">⟳</button>
+                <input ref={fileInputRef} type="file" multiple accept="*/*" style={{ display: "none" }} onChange={function(e) { var files = Array.from(e.target.files); uploadFiles(ideaKey, files); e.target.value = ""; }}/>
                 {!isEditing ? (
                   <button onClick={function() { setEditMode(true); setEditingId(idea.id); setEditText(idea.raw || ""); }} style={{ background: fc + "18", border: "1px solid " + fc + "55", borderRadius: "4px", color: fc, padding: "6px 14px", cursor: "pointer", fontSize: "11px", fontWeight: "700", letterSpacing: "0.08em", textShadow: "0 0 8px " + fc }}>
                     MODIFIER
@@ -1168,12 +1169,12 @@ export default function App() {
             </div>
 
             {/* Liste fichiers joints */}
-            {(ideaFiles[String(idea.id)] || []).length > 0 && (
+            {(ideaFiles[ideaKey] || []).length > 0 && (
               <div style={{ marginBottom: "12px", paddingBottom: "12px", borderBottom: "1px solid #00ff8810" }}>
                 {/* Miniatures images */}
-                {(ideaFiles[String(idea.id)] || []).some(function(f) { return isImage(f.name || ""); }) && (
+                {(ideaFiles[ideaKey] || []).some(function(f) { return isImage(f.name || ""); }) && (
                   <div style={{ display: "flex", gap: "6px", flexWrap: "wrap", marginBottom: "6px" }}>
-                    {(ideaFiles[String(idea.id)] || []).filter(function(f) { return isImage(f.name || ""); }).map(function(file) {
+                    {(ideaFiles[ideaKey] || []).filter(function(f) { return isImage(f.name || ""); }).map(function(file) {
                       var rawName = file.name || "";
                       var displayName = rawName.replace(/^\d+_/, "");
                       var url = getFileUrl(idea.id, rawName);
@@ -1182,16 +1183,16 @@ export default function App() {
                           <a href={url} target="_blank" rel="noreferrer">
                             <img src={url} alt={displayName} style={{ width: "56px", height: "56px", objectFit: "cover", borderRadius: "4px", border: "1px solid #00ff8833", display: "block" }}/>
                           </a>
-                          <button onClick={function() { deleteFile(idea.id, rawName); }} style={{ position: "absolute", top: "-4px", right: "-4px", background: "#ff4466", border: "none", borderRadius: "50%", width: "14px", height: "14px", color: "#fff", cursor: "pointer", fontSize: "8px", display: "flex", alignItems: "center", justifyContent: "center", padding: 0 }}>✕</button>
+                          <button onClick={function() { deleteFile(ideaKey, rawName); }} style={{ position: "absolute", top: "-4px", right: "-4px", background: "#ff4466", border: "none", borderRadius: "50%", width: "14px", height: "14px", color: "#fff", cursor: "pointer", fontSize: "8px", display: "flex", alignItems: "center", justifyContent: "center", padding: 0 }}>✕</button>
                         </div>
                       );
                     })}
                   </div>
                 )}
                 {/* Autres fichiers */}
-                {(ideaFiles[String(idea.id)] || []).filter(function(f) { return !isImage(f.name || ""); }).length > 0 && (
+                {(ideaFiles[ideaKey] || []).filter(function(f) { return !isImage(f.name || ""); }).length > 0 && (
                   <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
-                    {(ideaFiles[String(idea.id)] || []).filter(function(f) { return !isImage(f.name || ""); }).map(function(file) {
+                    {(ideaFiles[ideaKey] || []).filter(function(f) { return !isImage(f.name || ""); }).map(function(file) {
                       var rawName = file.name || "";
                       var displayName = rawName.replace(/^\d+_/, "");
                       var url = getFileUrl(idea.id, rawName);
@@ -1202,7 +1203,7 @@ export default function App() {
                             <a href={url} target="_blank" rel="noreferrer" style={{ color: "#aaccbb", fontSize: "11px", textDecoration: "none", display: "block", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{displayName}</a>
                             <div style={{ fontSize: "9px", color: "#445544", marginTop: "1px" }}>{file.metadata && file.metadata.size ? (file.metadata.size / 1024).toFixed(0) + " Ko" : ""}</div>
                           </div>
-                          <button onClick={function() { deleteFile(idea.id, rawName); }} style={{ background: "transparent", border: "1px solid #ff446633", borderRadius: "3px", color: "#ff6677", padding: "3px 7px", cursor: "pointer", fontSize: "11px", flexShrink: 0 }}>🗑</button>
+                          <button onClick={function() { deleteFile(ideaKey, rawName); }} style={{ background: "transparent", border: "1px solid #ff446633", borderRadius: "3px", color: "#ff6677", padding: "3px 7px", cursor: "pointer", fontSize: "11px", flexShrink: 0 }}>🗑</button>
                         </div>
                       );
                     })}
