@@ -183,7 +183,7 @@ export default function App() {
   var unlocked = unlockedState[0];
   var setUnlocked = unlockedState[1];
 
-  if (!unlocked) return <PinScreen onUnlock={function() { setUnlocked(true); }} />;
+  var screenState = useState("home");
   var screen = screenState[0];
   var setScreen = screenState[1];
 
@@ -940,6 +940,8 @@ export default function App() {
   }
 
   // DOCS
+  if (!unlocked) return <PinScreen onUnlock={function() { setUnlocked(true); }} />;
+
   if (screen === "docs") return (
     <div style={wrap}>
       <BG/><Header back={true} backLabel="ACCUEIL" backAction={function() { setScreen("home"); }}/>
