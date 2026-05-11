@@ -122,10 +122,7 @@ function Styles() {
   return <style>{"@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}@keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}@keyframes fadeUp{from{opacity:0;transform:translateX(-50%) translateY(8px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}textarea:focus{border-color:#00ff8833!important}input:focus{outline:none}*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}::-webkit-scrollbar{width:4px;background:#020e06}::-webkit-scrollbar-thumb{background:#00ff8818;border-radius:2px}"}</style>;
 }
 
-export default function App() {
-  var pinState = useState(sessionStorage.getItem("ideabox_auth") === "ok" ? false : true);
-  var showPin = pinState[0];
-  var setShowPin = pinState[1];
+function PinScreen({ onUnlock }) {
   var pinInputState = useState("");
   var pinInput = pinInputState[0];
   var setPinInput = pinInputState[1];
@@ -133,7 +130,60 @@ export default function App() {
   var pinError = pinErrorState[0];
   var setPinError = pinErrorState[1];
 
-  var screenState = useState("home");
+  function handleDigit(n) {
+    if (pinInput.length >= 4) return;
+    var next = pinInput + n;
+    setPinInput(next);
+    setPinError(false);
+    if (next.length === 4) {
+      if (next === "1102") { sessionStorage.setItem("ideabox_auth", "ok"); onUnlock(); }
+      else { setPinError(true); setTimeout(function() { setPinInput(""); setPinError(false); }, 800); }
+    }
+  }
+
+  useEffect(function() {
+    function handleKey(e) {
+      if (e.key >= "0" && e.key <= "9") { handleDigit(e.key); }
+      else if (e.key === "Backspace") { setPinInput(function(p) { return p.slice(0,-1); }); setPinError(false); }
+      else if (e.key === "Escape") { setPinInput(""); setPinError(false); }
+    }
+    window.addEventListener("keydown", handleKey);
+    return function() { window.removeEventListener("keydown", handleKey); };
+  }); // eslint-disable-line
+
+  return (
+    <div style={{ minHeight: "100vh", background: "#020e06", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'Courier New', monospace" }}>
+      <div style={{ textAlign: "center", padding: "40px 32px", background: "rgba(2,14,8,0.95)", border: "1px solid #00ff8822", borderRadius: "12px", width: "280px" }}>
+        <div style={{ fontSize: "28px", marginBottom: "8px" }}>🔒</div>
+        <div style={{ fontSize: "16px", fontWeight: "700", color: "#00ff88", letterSpacing: "0.15em", textShadow: "0 0 20px #00ff88", marginBottom: "4px" }}>IDEA_BOX</div>
+        <div style={{ fontSize: "10px", color: "#88bbaa", letterSpacing: "0.2em", marginBottom: "28px" }}>CODE D'ACCES</div>
+        <div style={{ display: "flex", gap: "10px", justifyContent: "center", marginBottom: "20px" }}>
+          {[0,1,2,3].map(function(i) {
+            return <div key={i} style={{ width: "44px", height: "52px", background: pinInput.length > i ? "rgba(0,255,136,0.15)" : "rgba(0,255,136,0.04)", border: "1px solid " + (pinError ? "#ff4466" : pinInput.length > i ? "#00ff88" : "#00ff8833"), borderRadius: "6px", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "22px", color: "#00ff88", transition: "all 0.2s" }}>{pinInput.length > i ? "●" : ""}</div>;
+          })}
+        </div>
+        {pinError && <div style={{ fontSize: "10px", color: "#ff4466", letterSpacing: "0.1em", marginBottom: "14px" }}>CODE INCORRECT</div>}
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "8px", marginBottom: "8px" }}>
+          {["1","2","3","4","5","6","7","8","9"].map(function(n) {
+            return <button key={n} onClick={function() { handleDigit(n); }} style={{ background: "rgba(0,255,136,0.06)", border: "1px solid #00ff8822", borderRadius: "6px", color: "#c8ffd4", fontSize: "18px", fontWeight: "700", padding: "14px", cursor: "pointer", fontFamily: "inherit" }}>{n}</button>;
+          })}
+        </div>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "8px" }}>
+          <button onClick={function() { setPinInput(""); setPinError(false); }} style={{ background: "transparent", border: "1px solid #ff446622", borderRadius: "6px", color: "#ff8899", fontSize: "12px", padding: "14px", cursor: "pointer", fontFamily: "inherit" }}>C</button>
+          <button onClick={function() { handleDigit("0"); }} style={{ background: "rgba(0,255,136,0.06)", border: "1px solid #00ff8822", borderRadius: "6px", color: "#c8ffd4", fontSize: "18px", fontWeight: "700", padding: "14px", cursor: "pointer", fontFamily: "inherit" }}>0</button>
+          <button onClick={function() { setPinInput(function(p) { return p.slice(0,-1); }); setPinError(false); }} style={{ background: "transparent", border: "1px solid #00ff8815", borderRadius: "6px", color: "#88bbaa", fontSize: "16px", padding: "14px", cursor: "pointer", fontFamily: "inherit" }}>⌫</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export default function App() {
+  var unlockedState = useState(sessionStorage.getItem("ideabox_auth") === "ok");
+  var unlocked = unlockedState[0];
+  var setUnlocked = unlockedState[1];
+
+  if (!unlocked) return <PinScreen onUnlock={function() { setUnlocked(true); }} />;
   var screen = screenState[0];
   var setScreen = screenState[1];
 
@@ -298,60 +348,6 @@ export default function App() {
   }, []);
 
   useEffect(function() { loadIdeas(); }, []); // eslint-disable-line
-
-  useEffect(function() {
-    if (!showPin) return;
-    function handleKey(e) {
-      if (e.key >= "0" && e.key <= "9") {
-        setPinInput(function(prev) {
-          if (prev.length >= 4) return prev;
-          var next = prev + e.key;
-          if (next.length === 4) {
-            if (next === "1102") { setTimeout(function() { sessionStorage.setItem("ideabox_auth","ok"); setShowPin(false); }, 100); }
-            else { setTimeout(function() { setPinError(true); setTimeout(function() { setPinInput(""); setPinError(false); }, 800); }, 0); }
-          }
-          return next;
-        });
-      } else if (e.key === "Backspace") { setPinInput(function(p) { return p.slice(0,-1); }); setPinError(false); }
-      else if (e.key === "Escape") { setPinInput(""); setPinError(false); }
-    }
-    window.addEventListener("keydown", handleKey);
-    return function() { window.removeEventListener("keydown", handleKey); };
-  }, [showPin]); // eslint-disable-line
-
-  if (showPin) return (
-    <div style={{ minHeight: "100vh", background: "#020e06", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'Courier New', monospace" }}>
-      <div style={{ textAlign: "center", padding: "40px 32px", background: "rgba(2,14,8,0.95)", border: "1px solid #00ff8822", borderRadius: "12px", width: "280px" }}>
-        <div style={{ fontSize: "28px", marginBottom: "8px" }}>🔒</div>
-        <div style={{ fontSize: "16px", fontWeight: "700", color: "#00ff88", letterSpacing: "0.15em", textShadow: "0 0 20px #00ff88", marginBottom: "4px" }}>IDEA_BOX</div>
-        <div style={{ fontSize: "10px", color: "#88bbaa", letterSpacing: "0.2em", marginBottom: "28px" }}>CODE D'ACCES</div>
-        <div style={{ display: "flex", gap: "10px", justifyContent: "center", marginBottom: "20px" }}>
-          {[0,1,2,3].map(function(i) {
-            return <div key={i} style={{ width: "44px", height: "52px", background: pinInput.length > i ? "rgba(0,255,136,0.15)" : "rgba(0,255,136,0.04)", border: "1px solid " + (pinError ? "#ff4466" : pinInput.length > i ? "#00ff88" : "#00ff8833"), borderRadius: "6px", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "22px", color: "#00ff88", transition: "all 0.2s" }}>{pinInput.length > i ? "●" : ""}</div>;
-          })}
-        </div>
-        {pinError && <div style={{ fontSize: "10px", color: "#ff4466", letterSpacing: "0.1em", marginBottom: "14px" }}>CODE INCORRECT</div>}
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "8px", marginBottom: "8px" }}>
-          {["1","2","3","4","5","6","7","8","9"].map(function(n) {
-            return <button key={n} onClick={function() {
-              if (pinInput.length >= 4) return;
-              var next = pinInput + n; setPinInput(next); setPinError(false);
-              if (next.length === 4) { if (next === "1102") { sessionStorage.setItem("ideabox_auth","ok"); setShowPin(false); } else { setPinError(true); setTimeout(function() { setPinInput(""); setPinError(false); }, 800); } }
-            }} style={{ background: "rgba(0,255,136,0.06)", border: "1px solid #00ff8822", borderRadius: "6px", color: "#c8ffd4", fontSize: "18px", fontWeight: "700", padding: "14px", cursor: "pointer", fontFamily: "inherit" }}>{n}</button>;
-          })}
-        </div>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "8px" }}>
-          <button onClick={function() { setPinInput(""); setPinError(false); }} style={{ background: "transparent", border: "1px solid #ff446622", borderRadius: "6px", color: "#ff8899", fontSize: "12px", padding: "14px", cursor: "pointer", fontFamily: "inherit" }}>C</button>
-          <button onClick={function() {
-            if (pinInput.length >= 4) return;
-            var next = pinInput + "0"; setPinInput(next); setPinError(false);
-            if (next.length === 4) { if (next === "1102") { sessionStorage.setItem("ideabox_auth","ok"); setShowPin(false); } else { setPinError(true); setTimeout(function() { setPinInput(""); setPinError(false); }, 800); } }
-          }} style={{ background: "rgba(0,255,136,0.06)", border: "1px solid #00ff8822", borderRadius: "6px", color: "#c8ffd4", fontSize: "18px", fontWeight: "700", padding: "14px", cursor: "pointer", fontFamily: "inherit" }}>0</button>
-          <button onClick={function() { setPinInput(function(p) { return p.slice(0,-1); }); setPinError(false); }} style={{ background: "transparent", border: "1px solid #00ff8815", borderRadius: "6px", color: "#88bbaa", fontSize: "16px", padding: "14px", cursor: "pointer", fontFamily: "inherit" }}>⌫</button>
-        </div>
-      </div>
-    </div>
-  );
 
   useEffect(function() {
     if (screen === "idea_detail" && activeIdea) {
