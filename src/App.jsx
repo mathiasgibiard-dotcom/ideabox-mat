@@ -53,7 +53,7 @@ function buildPrompt(folderId) {
     gestion:  "Ce projet est un OUTIL DE GESTION. Fonctionnalites : tableaux, filtres...",
     autre:    "Adapte le type selon la description.",
   };
-  return "Tu es un expert en developpement logiciel et digital. " + (map[folderId] || "") + "\nL'utilisateur te donne une idee brute ou modifiee. Genere une fiche projet ET un prompt professionnel pour Claude.\nReponds UNIQUEMENT en JSON valide, sans markdown, sans backticks.\nFormat :{\"titre\":\"max 3 mots\",\"concept\":\"1-2 phrases\",\"fonctionnalites\":[\"f1\",\"f2\",\"f3\",\"f4\"],\"folder\":\"Libre ou Site Web ou App Mobile ou Logiciel ou Outils et SaaS ou Gestion Suivi ou Autre\",\"status\":\"idee\",\"priority\":\"haute ou moyenne ou basse\",\"tags\":[\"t1\",\"t2\",\"t3\"],\"prompt\":\"Prompt complet pret pour Claude.\"}";
+  return "Tu es un expert en developpement logiciel et digital. " + (map[folderId] || "") + "\nL'utilisateur te donne une idee brute ou modifiee. Genere une fiche projet ET un prompt professionnel pour Claude.\n\nREGLES ABSOLUES :\n1. Reponds UNIQUEMENT avec du JSON brut valide\n2. ZERO texte avant ou apres le JSON\n3. ZERO markdown, ZERO backticks, ZERO commentaire\n4. Le JSON doit commencer par { et finir par }\n5. Toutes les chaines doivent etre sur une seule ligne (pas de retour a la ligne dans les valeurs)\n\nFormat EXACT a respecter :\n{\"titre\":\"Titre court du projet\",\"concept\":\"Description claire en 1-2 phrases.\",\"fonctionnalites\":[\"Fonctionnalite 1\",\"Fonctionnalite 2\",\"Fonctionnalite 3\",\"Fonctionnalite 4\",\"Fonctionnalite 5\"],\"folder\":\"Libre ou Site Web ou App Mobile ou Logiciel ou Outils et SaaS ou Gestion Suivi ou Autre\",\"status\":\"idee\",\"priority\":\"haute ou moyenne ou basse\",\"tags\":[\"tag1\",\"tag2\",\"tag3\"],\"prompt\":\"Prompt professionnel complet pret a coller dans Claude.\"}";
 }
 
 function GlitchText(props) {
@@ -382,7 +382,7 @@ export default function App() {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        model: "claude-opus-4-7", max_tokens: 3000,
+        model: "claude-opus-4-7", max_tokens: 4000,
         system: buildPrompt(folderId || "libre"),
         messages: [{ role: "user", content: truncated }],
       }),
