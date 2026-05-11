@@ -685,15 +685,22 @@ export default function App() {
   }
 
   function loadFiles(ideaId) {
+    var id = String(ideaId);
     fetch(SUPABASE_URL + "/storage/v1/object/list/idea-files", {
       method: "POST",
       headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": "Bearer " + SUPABASE_KEY },
-      body: JSON.stringify({ prefix: ideaId + "/", limit: 50 }),
+      body: JSON.stringify({ prefix: id + "/", limit: 100, sortBy: { column: "created_at", order: "desc" } }),
     }).then(function(r) { return r.json(); }).then(function(data) {
+      console.log("loadFiles response:", JSON.stringify(data));
       if (Array.isArray(data)) {
-        setIdeaFiles(function(prev) { return Object.assign({}, prev, { [ideaId]: data }); });
+        // Filtrer les dossiers (name vide ou se terminant par /)
+        var files = data.filter(function(f) { return f.name && f.name !== "" && !f.name.endsWith("/"); });
+        setIdeaFiles(function(prev) { return Object.assign({}, prev, { [id]: files }); });
+        console.log("files set:", files.length, files.map(function(f){return f.name;}));
+      } else {
+        console.log("loadFiles: data n'est pas un array:", typeof data, data);
       }
-    }).catch(function() {});
+    }).catch(function(err) { console.log("loadFiles error:", err); });
   }
 
   function uploadFile(ideaId, file) {
@@ -1142,8 +1149,8 @@ export default function App() {
               <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
                 <button onClick={function() { if (fileInputRef.current) fileInputRef.current.click(); }} disabled={isUploading} style={{ background: isUploading ? "transparent" : "rgba(0,255,136,0.08)", border: "1px solid #00ff8833", borderRadius: "3px", color: isUploading ? "#88bbaa" : "#00ff88", padding: "4px 10px", cursor: isUploading ? "not-allowed" : "pointer", fontSize: "10px", fontWeight: "700", letterSpacing: "0.06em", display: "flex", alignItems: "center", gap: "6px" }}>
                   {isUploading ? "UPLOAD..." : "📎 FICHIER"}
-                  {!isUploading && (ideaFiles[idea.id] || []).length > 0 && (
-                    <span style={{ background: "#00ff88", color: "#020e06", borderRadius: "50%", width: "16px", height: "16px", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "9px", fontWeight: "900", flexShrink: 0 }}>{(ideaFiles[idea.id] || []).length}</span>
+                  {!isUploading && (ideaFiles[String(idea.id)] || []).length > 0 && (
+                    <span style={{ background: "#00ff88", color: "#020e06", borderRadius: "50%", width: "16px", height: "16px", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "9px", fontWeight: "900", flexShrink: 0 }}>{(ideaFiles[String(idea.id)] || []).length}</span>
                   )}
                 </button>
                 <button onClick={function() { loadFiles(idea.id); }} style={{ background: "transparent", border: "1px solid #00ff8820", borderRadius: "3px", color: "#00ff8866", padding: "4px 8px", cursor: "pointer", fontSize: "11px" }} title="Rafraîchir les fichiers">⟳</button>
@@ -1161,12 +1168,12 @@ export default function App() {
             </div>
 
             {/* Liste fichiers joints */}
-            {(ideaFiles[idea.id] || []).length > 0 && (
+            {(ideaFiles[String(idea.id)] || []).length > 0 && (
               <div style={{ marginBottom: "12px", paddingBottom: "12px", borderBottom: "1px solid #00ff8810" }}>
                 {/* Miniatures images */}
-                {(ideaFiles[idea.id] || []).some(function(f) { return isImage(f.name || ""); }) && (
+                {(ideaFiles[String(idea.id)] || []).some(function(f) { return isImage(f.name || ""); }) && (
                   <div style={{ display: "flex", gap: "6px", flexWrap: "wrap", marginBottom: "6px" }}>
-                    {(ideaFiles[idea.id] || []).filter(function(f) { return isImage(f.name || ""); }).map(function(file) {
+                    {(ideaFiles[String(idea.id)] || []).filter(function(f) { return isImage(f.name || ""); }).map(function(file) {
                       var rawName = file.name || "";
                       var displayName = rawName.replace(/^\d+_/, "");
                       var url = getFileUrl(idea.id, rawName);
@@ -1182,9 +1189,9 @@ export default function App() {
                   </div>
                 )}
                 {/* Autres fichiers */}
-                {(ideaFiles[idea.id] || []).filter(function(f) { return !isImage(f.name || ""); }).length > 0 && (
+                {(ideaFiles[String(idea.id)] || []).filter(function(f) { return !isImage(f.name || ""); }).length > 0 && (
                   <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
-                    {(ideaFiles[idea.id] || []).filter(function(f) { return !isImage(f.name || ""); }).map(function(file) {
+                    {(ideaFiles[String(idea.id)] || []).filter(function(f) { return !isImage(f.name || ""); }).map(function(file) {
                       var rawName = file.name || "";
                       var displayName = rawName.replace(/^\d+_/, "");
                       var url = getFileUrl(idea.id, rawName);
