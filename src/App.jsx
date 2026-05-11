@@ -259,6 +259,10 @@ export default function App() {
   var showIdeaDownload = showIdeaDownloadState[0];
   var setShowIdeaDownload = showIdeaDownloadState[1];
 
+  var editExpandedState = useState(false);
+  var editExpanded = editExpandedState[0];
+  var setEditExpanded = editExpandedState[1];
+
   var recognitionRef = useRef(null);
   var inputRef = useRef(null);
   var editRef = useRef(null);
@@ -1143,7 +1147,10 @@ export default function App() {
 
             {isEditing && (
               <div>
-                <div style={{ fontSize: "10px", color: fc + "88", letterSpacing: "0.12em", marginBottom: "8px" }}>MODIFIE OU COMPLETE TON IDEE ORIGINALE</div>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "8px" }}>
+                  <div style={{ fontSize: "10px", color: fc + "88", letterSpacing: "0.12em" }}>MODIFIE OU COMPLETE TON IDEE ORIGINALE</div>
+                  <button onClick={function() { setEditExpanded(true); }} style={{ background: "transparent", border: "1px solid " + fc + "33", borderRadius: "3px", color: fc + "77", padding: "3px 8px", cursor: "pointer", fontSize: "9px", letterSpacing: "0.06em" }}>⛶ PLEIN ECRAN</button>
+                </div>
                 <textarea ref={editRef} value={editText} onChange={function(e) { setEditText(e.target.value); }}
                   style={{ width: "100%", minHeight: "100px", background: "#020e06", border: "1px solid " + fc + "33", borderRadius: "4px", color: "#c8ffd4", fontSize: "13px", fontFamily: "inherit", lineHeight: "1.7", padding: "10px 14px", resize: "vertical", outline: "none", boxSizing: "border-box", marginBottom: "10px" }}
                 />
@@ -1253,6 +1260,27 @@ export default function App() {
             )}
           </div>
         </div>
+
+        {/* Modal plein écran écriture */}
+        {editExpanded && (
+          <div style={{ position: "fixed", inset: 0, zIndex: 200, background: "rgba(2,8,4,0.99)", display: "flex", flexDirection: "column" }}>
+            <div style={{ background: "rgba(3,10,5,0.99)", borderBottom: "1px solid " + fc + "33", padding: "12px 16px", display: "flex", alignItems: "center", justifyContent: "space-between", flexShrink: 0 }}>
+              <span style={{ fontSize: "13px", color: fc, fontWeight: "700", letterSpacing: "0.1em", textShadow: "0 0 10px " + fc }}>✏ MODIFIER — {idea.titre}</span>
+              <div style={{ display: "flex", gap: "8px" }}>
+                <button onClick={function() { if (!editText.trim()) return; updateIdea(idea.id, { raw: editText }); setEditMode(false); setEditText(""); setEditingId(null); setEditExpanded(false); showToast("Idee sauvegardee !"); }} disabled={!editText.trim()} style={{ background: editText.trim() ? "rgba(0,255,136,0.1)" : "transparent", border: "1px solid " + (editText.trim() ? "#00ff8855" : "#00ff8820"), borderRadius: "4px", color: editText.trim() ? "#00ff88" : "#445544", padding: "6px 14px", cursor: editText.trim() ? "pointer" : "not-allowed", fontSize: "11px", fontWeight: "700", letterSpacing: "0.06em" }}>💾 SAUVEGARDER</button>
+                <button onClick={function() { regenerateIdea(idea); setEditExpanded(false); }} disabled={!editText.trim() || isProcessing} style={{ background: editText.trim() && !isProcessing ? fc + "18" : "transparent", border: "1px solid " + (editText.trim() && !isProcessing ? fc + "55" : fc + "15"), borderRadius: "4px", color: editText.trim() && !isProcessing ? fc : "#445544", padding: "6px 14px", cursor: editText.trim() && !isProcessing ? "pointer" : "not-allowed", fontSize: "11px", fontWeight: "700", letterSpacing: "0.06em" }}>⚡ REGENERER</button>
+                <button onClick={function() { setEditExpanded(false); }} style={{ background: "transparent", border: "1px solid #ff446644", borderRadius: "4px", color: "#ff8899", padding: "6px 12px", cursor: "pointer", fontSize: "12px" }}>✕ FERMER</button>
+              </div>
+            </div>
+            <div style={{ flex: 1, display: "flex", flexDirection: "column", padding: "20px", maxWidth: "800px", margin: "0 auto", width: "100%", boxSizing: "border-box" }}>
+              <textarea value={editText} onChange={function(e) { setEditText(e.target.value); }} autoFocus
+                placeholder="Écris ou complète ton idée ici..."
+                style={{ flex: 1, width: "100%", background: "#020e06", border: "1px solid " + fc + "22", borderRadius: "6px", color: "#c8ffd4", fontSize: "15px", fontFamily: "inherit", lineHeight: "1.8", padding: "20px", resize: "none", outline: "none", boxSizing: "border-box" }}
+              />
+              <div style={{ fontSize: "10px", color: "#334433", textAlign: "right", marginTop: "6px", letterSpacing: "0.06em" }}>{editText.length} CARACTÈRES</div>
+            </div>
+          </div>
+        )}
 
         {/* Modal plein écran fiche idée */}
         {ideaExpanded && (
