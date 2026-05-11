@@ -376,16 +376,23 @@ export default function App() {
 
   function callAI(text, folderId, ideaId) {
     setIsProcessing(true);
+    // Limiter le texte à 8000 caractères pour éviter les erreurs de contexte
+    var truncated = text.length > 8000 ? text.slice(0, 8000) + "\n\n[Texte tronqué pour l'analyse]" : text;
     return fetch("/api/claude", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        model: "claude-opus-4-7", max_tokens: 1500,
+        model: "claude-opus-4-7", max_tokens: 3000,
         system: buildPrompt(folderId || "libre"),
-        messages: [{ role: "user", content: text }],
+        messages: [{ role: "user", content: truncated }],
       }),
     }).then(function(res) { return res.json(); }).then(function(data) {
-      return JSON.parse(data.content && data.content[0] ? data.content[0].text : "{}");
+      var raw = data.content && data.content[0] ? data.content[0].text : "{}";
+      // Nettoyer le JSON si Claude a ajouté des backticks
+      var clean = raw.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
+      // Extraire le JSON s'il est entouré de texte
+      var match = clean.match(/\{[\s\S]*\}/);
+      return JSON.parse(match ? match[0] : clean);
     });
   }
 
