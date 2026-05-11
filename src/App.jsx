@@ -716,11 +716,12 @@ export default function App() {
     Promise.all(promises).then(function() {
       setIsUploading(false);
       showToast(files.length > 1 ? files.length + " fichiers ajoutes !" : "Fichier ajoute !");
-      loadFiles(ideaId);
+      // Petit délai pour que Supabase indexe les fichiers
+      setTimeout(function() { loadFiles(ideaId); }, 800);
     }).catch(function() {
       setIsUploading(false);
       showToast("Erreur upload", "err");
-      loadFiles(ideaId);
+      setTimeout(function() { loadFiles(ideaId); }, 800);
     });
   }
 
@@ -1145,6 +1146,7 @@ export default function App() {
                     <span style={{ background: "#00ff88", color: "#020e06", borderRadius: "50%", width: "16px", height: "16px", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "9px", fontWeight: "900", flexShrink: 0 }}>{(ideaFiles[idea.id] || []).length}</span>
                   )}
                 </button>
+                <button onClick={function() { loadFiles(idea.id); }} style={{ background: "transparent", border: "1px solid #00ff8820", borderRadius: "3px", color: "#00ff8866", padding: "4px 8px", cursor: "pointer", fontSize: "11px" }} title="Rafraîchir les fichiers">⟳</button>
                 <input ref={fileInputRef} type="file" multiple accept="*/*" style={{ display: "none" }} onChange={function(e) { var files = Array.from(e.target.files); uploadFiles(idea.id, files); e.target.value = ""; }}/>
                 {!isEditing ? (
                   <button onClick={function() { setEditMode(true); setEditingId(idea.id); setEditText(idea.raw || ""); }} style={{ background: fc + "18", border: "1px solid " + fc + "55", borderRadius: "4px", color: fc, padding: "6px 14px", cursor: "pointer", fontSize: "11px", fontWeight: "700", letterSpacing: "0.08em", textShadow: "0 0 8px " + fc }}>
