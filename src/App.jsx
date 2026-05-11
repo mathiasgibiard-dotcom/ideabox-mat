@@ -1411,6 +1411,9 @@ export default function App() {
                 {previewHtml && previewHtml !== "loading" && (
                   <button onClick={function() { downloadPreview(idea, previewHtml); }} style={{ background: "rgba(180,0,255,0.08)", border: "1px solid #cc88ff44", borderRadius: "4px", color: "#cc88ff88", padding: "6px 12px", cursor: "pointer", fontSize: "10px" }}>⬇ HTML</button>
                 )}
+                {previewHtml && previewHtml !== "loading" && (
+                  <button onClick={function() { var blob = new Blob([previewHtml], { type: "text/html" }); var url = URL.createObjectURL(blob); window.open(url, "_blank"); }} style={{ background: "rgba(180,0,255,0.08)", border: "1px solid #cc88ff44", borderRadius: "4px", color: "#cc88ff", padding: "6px 12px", cursor: "pointer", fontSize: "10px", fontWeight: "700" }}>🔗 OUVRIR</button>
+                )}
                 <button onClick={function() { setPreviewHtml(null); }} style={{ background: "transparent", border: "1px solid #ff446644", borderRadius: "4px", color: "#ff8899", padding: "6px 12px", cursor: "pointer", fontSize: "12px" }}>✕ FERMER</button>
               </div>
             </div>
