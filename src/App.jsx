@@ -235,6 +235,14 @@ export default function App() {
 
   var docFileInputRef = useRef(null);
 
+  var docExpandedState = useState(false);
+  var docExpanded = docExpandedState[0];
+  var setDocExpanded = docExpandedState[1];
+
+  var showDownloadMenuState = useState(false);
+  var showDownloadMenu = showDownloadMenuState[0];
+  var setShowDownloadMenu = showDownloadMenuState[1];
+
   var recognitionRef = useRef(null);
   var inputRef = useRef(null);
   var editRef = useRef(null);
@@ -540,16 +548,32 @@ export default function App() {
     });
   }
 
-  function downloadDocResult() {
+  function downloadDocResult(format) {
     if (!docResult) return;
     var modeLabels = { resumer: "Resume", analyser: "Analyse", restructurer: "Document_restructure" };
-    var filename = modeLabels[docMode] + "_" + new Date().toLocaleDateString("fr-FR").replace(/\//g, "-") + ".md";
-    var blob = new Blob([docResult], { type: "text/markdown;charset=utf-8" });
-    var url = URL.createObjectURL(blob);
-    var a = document.createElement("a");
-    a.href = url; a.download = filename; a.click();
-    URL.revokeObjectURL(url);
-    showToast("Fichier telecharge !");
+    var baseName = modeLabels[docMode] + "_" + new Date().toLocaleDateString("fr-FR").replace(/\//g, "-");
+    if (format === "md") {
+      var blob = new Blob([docResult], { type: "text/markdown;charset=utf-8" });
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement("a"); a.href = url; a.download = baseName + ".md"; a.click();
+      URL.revokeObjectURL(url);
+      showToast("Markdown telecharge !");
+    } else if (format === "txt") {
+      var plain = docResult.replace(/#{1,3} /g, "").replace(/\*\*/g, "");
+      var blob2 = new Blob([plain], { type: "text/plain;charset=utf-8" });
+      var url2 = URL.createObjectURL(blob2);
+      var a2 = document.createElement("a"); a2.href = url2; a2.download = baseName + ".txt"; a2.click();
+      URL.revokeObjectURL(url2);
+      showToast("TXT telecharge !");
+    } else if (format === "html") {
+      var html = "<!DOCTYPE html><html><head><meta charset='utf-8'><style>body{font-family:Arial,sans-serif;max-width:800px;margin:40px auto;padding:20px;color:#222;line-height:1.7}h1,h2,h3{color:#1a5276}strong{color:#1a5276}</style></head><body>" + renderMarkdown(docResult).replace(/style='[^']*'/g, "") + "</body></html>";
+      var blob3 = new Blob([html], { type: "text/html;charset=utf-8" });
+      var url3 = URL.createObjectURL(blob3);
+      var a3 = document.createElement("a"); a3.href = url3; a3.download = baseName + ".html"; a3.click();
+      URL.revokeObjectURL(url3);
+      showToast("HTML telecharge !");
+    }
+    setShowDownloadMenu(false);
   }
 
   function renderMarkdown(text) {
@@ -760,12 +784,50 @@ export default function App() {
               <div style={{ fontSize: "10px", color: "#00aaff88", letterSpacing: "0.15em" }}>
                 {docMode === "resumer" ? "📋 RESUME" : docMode === "analyser" ? "🔍 ANALYSE" : "✨ DOCUMENT RESTRUCTURE"}
               </div>
-              <div style={{ display: "flex", gap: "6px" }}>
+              <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
+                <button onClick={function() { setDocExpanded(true); }} style={{ background: "transparent", border: "1px solid #00aaff33", borderRadius: "3px", color: "#00aaff88", padding: "4px 10px", cursor: "pointer", fontSize: "10px" }}>⛶ AGRANDIR</button>
                 <button onClick={function() { navigator.clipboard.writeText(docResult); showToast("Copie !"); }} style={{ background: "transparent", border: "1px solid #00aaff33", borderRadius: "3px", color: "#00aaff88", padding: "4px 10px", cursor: "pointer", fontSize: "10px" }}>COPIER</button>
-                <button onClick={downloadDocResult} style={{ background: "rgba(0,170,255,0.1)", border: "1px solid #00aaff55", borderRadius: "3px", color: "#00aaff", padding: "4px 10px", cursor: "pointer", fontSize: "10px", fontWeight: "700" }}>⬇ TÉLÉCHARGER</button>
+                <div style={{ position: "relative" }}>
+                  <button onClick={function() { setShowDownloadMenu(function(v) { return !v; }); }} style={{ background: "rgba(0,170,255,0.1)", border: "1px solid #00aaff55", borderRadius: "3px", color: "#00aaff", padding: "4px 10px", cursor: "pointer", fontSize: "10px", fontWeight: "700" }}>⬇ FORMAT ▾</button>
+                  {showDownloadMenu && (
+                    <div style={{ position: "absolute", right: 0, top: "110%", background: "#020e06", border: "1px solid #00aaff33", borderRadius: "4px", zIndex: 50, minWidth: "120px", overflow: "hidden" }}>
+                      {[{f:"md", label:"📝 Markdown"}, {f:"txt", label:"📄 Texte .txt"}, {f:"html", label:"🌐 HTML"}].map(function(item) {
+                        return <button key={item.f} onClick={function() { downloadDocResult(item.f); }} style={{ display: "block", width: "100%", background: "transparent", border: "none", borderBottom: "1px solid #00aaff11", color: "#aaccdd", padding: "9px 14px", cursor: "pointer", fontSize: "11px", textAlign: "left", fontFamily: "inherit" }}>{item.label}</button>;
+                      })}
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
-            <div style={{ fontSize: "12px", color: "#99ccaa", lineHeight: "1.8", maxHeight: "500px", overflowY: "auto" }} dangerouslySetInnerHTML={{ __html: renderMarkdown(docResult) }}/>
+            <div style={{ fontSize: "12px", color: "#99ccaa", lineHeight: "1.8", maxHeight: "400px", overflowY: "auto" }} dangerouslySetInnerHTML={{ __html: renderMarkdown(docResult) }}/>
+          </div>
+        )}
+
+        {/* Modal plein écran résultat */}
+        {docExpanded && docResult && (
+          <div style={{ position: "fixed", inset: 0, zIndex: 200, background: "rgba(2,8,4,0.98)", display: "flex", flexDirection: "column" }}>
+            <div style={{ background: "rgba(3,10,5,0.99)", borderBottom: "1px solid #00aaff33", padding: "12px 16px", display: "flex", alignItems: "center", justifyContent: "space-between", flexShrink: 0 }}>
+              <span style={{ fontSize: "13px", color: "#00aaff", fontWeight: "700", letterSpacing: "0.1em" }}>
+                {docMode === "resumer" ? "📋 RESUME" : docMode === "analyser" ? "🔍 ANALYSE" : "✨ DOCUMENT RESTRUCTURE"}
+              </span>
+              <div style={{ display: "flex", gap: "8px" }}>
+                <button onClick={function() { navigator.clipboard.writeText(docResult); showToast("Copie !"); }} style={{ background: "transparent", border: "1px solid #00aaff33", borderRadius: "4px", color: "#00aaff88", padding: "6px 12px", cursor: "pointer", fontSize: "10px" }}>COPIER</button>
+                <div style={{ position: "relative" }}>
+                  <button onClick={function() { setShowDownloadMenu(function(v) { return !v; }); }} style={{ background: "rgba(0,170,255,0.1)", border: "1px solid #00aaff55", borderRadius: "4px", color: "#00aaff", padding: "6px 12px", cursor: "pointer", fontSize: "10px", fontWeight: "700" }}>⬇ FORMAT ▾</button>
+                  {showDownloadMenu && (
+                    <div style={{ position: "absolute", right: 0, top: "110%", background: "#020e06", border: "1px solid #00aaff33", borderRadius: "4px", zIndex: 50, minWidth: "130px", overflow: "hidden" }}>
+                      {[{f:"md", label:"📝 Markdown"}, {f:"txt", label:"📄 Texte .txt"}, {f:"html", label:"🌐 HTML"}].map(function(item) {
+                        return <button key={item.f} onClick={function() { downloadDocResult(item.f); }} style={{ display: "block", width: "100%", background: "transparent", border: "none", borderBottom: "1px solid #00aaff11", color: "#aaccdd", padding: "9px 14px", cursor: "pointer", fontSize: "11px", textAlign: "left", fontFamily: "inherit" }}>{item.label}</button>;
+                      })}
+                    </div>
+                  )}
+                </div>
+                <button onClick={function() { setDocExpanded(false); setShowDownloadMenu(false); }} style={{ background: "transparent", border: "1px solid #ff446644", borderRadius: "4px", color: "#ff8899", padding: "6px 12px", cursor: "pointer", fontSize: "12px" }}>✕ FERMER</button>
+              </div>
+            </div>
+            <div style={{ flex: 1, overflowY: "auto", padding: "24px", maxWidth: "800px", margin: "0 auto", width: "100%" }}>
+              <div style={{ fontSize: "14px", color: "#99ccaa", lineHeight: "2" }} dangerouslySetInnerHTML={{ __html: renderMarkdown(docResult) }}/>
+            </div>
           </div>
         )}
 
@@ -956,6 +1018,9 @@ export default function App() {
                 <div style={{ display: "flex", gap: "8px" }}>
                   <button onClick={isRecording ? stopRecording : function() { startRecording(setEditText); }} style={{ background: isRecording ? "#ff446615" : "transparent", border: isRecording ? "1px solid #ff446644" : "1px solid " + fc + "22", borderRadius: "4px", color: isRecording ? "#ff8899" : fc + "88", padding: "8px 14px", cursor: "pointer", fontSize: "12px", display: "flex", alignItems: "center", gap: "6px" }}>
                     🎤 {isRecording ? "STOP" : "VOCAL"}
+                  </button>
+                  <button onClick={function() { if (!editText.trim()) return; updateIdea(idea.id, { raw: editText }); setEditMode(false); setEditText(""); setEditingId(null); showToast("Idee sauvegardee !"); }} disabled={!editText.trim()} style={{ background: editText.trim() ? "rgba(0,255,136,0.08)" : "transparent", border: "1px solid " + (editText.trim() ? "#00ff8844" : "#00ff8815"), borderRadius: "4px", color: editText.trim() ? "#00ff88" : "#445544", padding: "8px 12px", cursor: editText.trim() ? "pointer" : "not-allowed", fontSize: "11px", fontWeight: "700", letterSpacing: "0.06em", whiteSpace: "nowrap", transition: "all 0.2s" }}>
+                    💾 SAUV.
                   </button>
                   <button onClick={function() { regenerateIdea(idea); }} disabled={!editText.trim() || isProcessing} style={{ flex: 1, background: editText.trim() && !isProcessing ? fc + "18" : "transparent", border: "1px solid " + (editText.trim() && !isProcessing ? fc : fc + "20"), borderRadius: "4px", color: editText.trim() && !isProcessing ? fc : "#88bbaa", padding: "8px", cursor: editText.trim() && !isProcessing ? "pointer" : "not-allowed", fontSize: "12px", fontWeight: "700", letterSpacing: "0.08em", textShadow: editText.trim() && !isProcessing ? "0 0 10px " + fc : "none", transition: "all 0.2s" }}>
                     {isProcessing ? "REGENERATION..." : "⚡ REGENERER AVEC L'IA"}
