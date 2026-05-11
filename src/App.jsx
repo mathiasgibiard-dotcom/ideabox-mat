@@ -290,7 +290,13 @@ export default function App() {
   useEffect(function() { loadIdeas(); }, []); // eslint-disable-line
 
   useEffect(function() {
-    if (screen === "idea_detail" && activeIdea) loadFiles(String(activeIdea.id));
+    if (screen === "idea_detail" && activeIdea) {
+      loadFiles(String(activeIdea.id));
+      loadPreviewVersions(activeIdea.id);
+      setPreviewVersions([]);
+      setPreviewHtml(null);
+      setActiveVersion(null);
+    }
   }, [screen, activeIdea]); // eslint-disable-line
 
   useEffect(function() {
@@ -544,6 +550,51 @@ export default function App() {
     showToast("Apercu telecharge !");
   }
 
+  function loadPreviewVersions(ideaId) {
+    sbFetch("preview_versions?idea_id=eq." + ideaId + "&select=*&order=ts.desc").then(function(data) {
+      if (Array.isArray(data)) {
+        setPreviewVersions(data);
+        if (data.length > 0) { setActiveVersion(data[0].id); setPreviewHtml(data[0].html); }
+      }
+    }).catch(function() {});
+  }
+
+  function savePreviewVersion(ideaId, html, versionsCount, starred) {
+    var version = {
+      id: Date.now(),
+      idea_id: ideaId,
+      html: html,
+      label: "Version " + (versionsCount + 1),
+      starred: starred || false,
+      date: new Date().toLocaleTimeString("fr-FR"),
+      ts: Date.now(),
+    };
+    sbFetch("preview_versions", "POST", version).then(function() {
+      setPreviewVersions(function(prev) { return [version].concat(prev).slice(0, 10); });
+      setActiveVersion(version.id);
+    }).catch(function() {});
+    return version;
+  }
+
+  function deletePreviewVersion(versionId, ideaId) {
+    sbFetch("preview_versions?id=eq." + versionId, "DELETE").then(function() {
+      setPreviewVersions(function(prev) {
+        var updated = prev.filter(function(x) { return x.id !== versionId; });
+        if (updated.length > 0) { setPreviewHtml(updated[0].html); setActiveVersion(updated[0].id); }
+        else { setPreviewHtml(null); }
+        return updated;
+      });
+    }).catch(function() {});
+  }
+
+  function starPreviewVersion(version) {
+    var newStarred = !version.starred;
+    var newLabel = newStarred ? "⭐ Favorite" : "Version " + (previewVersions.indexOf(version) + 1);
+    sbFetch("preview_versions?id=eq." + version.id, "PATCH", { starred: newStarred, label: newLabel }).then(function() {
+      setPreviewVersions(function(prev) { return prev.map(function(x) { return x.id === version.id ? Object.assign({}, x, { starred: newStarred, label: newLabel }) : x; }); });
+    }).catch(function() {});
+  }
+
   function generatePreview(idea) {
     setIsGeneratingPreview(true);
     setPreviewHtml("loading");
@@ -558,10 +609,7 @@ export default function App() {
       html = html.replace(/```html/gi, "").replace(/```/g, "").trim();
       setPreviewHtml(html);
       setIsGeneratingPreview(false);
-      // Sauvegarder dans la galerie
-      var version = { id: Date.now(), html: html, date: new Date().toLocaleTimeString("fr-FR"), label: "Version " + (previewVersions.length + 1), starred: false };
-      setPreviewVersions(function(prev) { return [version].concat(prev).slice(0, 10); }); // max 10 versions
-      setActiveVersion(version.id);
+      savePreviewVersion(idea.id, html, previewVersions.length, false);
     }).catch(function() {
       showToast("Erreur generation apercu", "err");
       setIsGeneratingPreview(false);
@@ -1306,6 +1354,11 @@ export default function App() {
               <button onClick={function() { generatePreview(idea); }} disabled={isGeneratingPreview} style={{ width: "100%", marginTop: "8px", background: isGeneratingPreview ? "transparent" : "rgba(180,0,255,0.08)", border: "1px solid " + (isGeneratingPreview ? "#55335588" : "rgba(180,0,255,0.4)"), borderRadius: "4px", color: isGeneratingPreview ? "#88bbaa" : "#cc88ff", padding: "10px", cursor: isGeneratingPreview ? "not-allowed" : "pointer", fontSize: "12px", fontWeight: "700", letterSpacing: "0.08em", textShadow: isGeneratingPreview ? "none" : "0 0 10px #cc88ff66", transition: "all 0.2s" }}>
                 {isGeneratingPreview ? "GENERATION APERCU..." : "🖥 VISUALISER L'INTERFACE"}
               </button>
+              {previewVersions.length > 0 && (
+                <button onClick={function() { setPreviewHtml(previewVersions[0].html); setActiveVersion(previewVersions[0].id); setShowGallery(true); }} style={{ width: "100%", marginTop: "6px", background: "rgba(180,0,255,0.05)", border: "1px solid #cc88ff22", borderRadius: "4px", color: "#cc88ff88", padding: "8px", cursor: "pointer", fontSize: "11px", letterSpacing: "0.06em" }}>
+                  🗂 GALERIE — {previewVersions.length} VERSION{previewVersions.length > 1 ? "S" : ""} SAUVEGARDEE{previewVersions.length > 1 ? "S" : ""}
+                </button>
+              )}
             </div>
           )}
 
@@ -1454,8 +1507,8 @@ export default function App() {
                       </div>
                       <div style={{ fontSize: "8px", color: isActive ? "#cc88ff" : "#556655", textAlign: "center", marginTop: "4px", letterSpacing: "0.04em" }}>{v.label}</div>
                       <div style={{ display: "flex", gap: "3px", justifyContent: "center", marginTop: "2px" }}>
-                        <button onClick={function(e) { e.stopPropagation(); setPreviewVersions(function(prev) { return prev.map(function(x) { return x.id === v.id ? Object.assign({}, x, { starred: !x.starred, label: !x.starred ? "⭐ Favorite" : "Version " + prev.indexOf(x)+1 }) : x; }); }); }} style={{ background: "transparent", border: "none", color: v.starred ? "#ffcc00" : "#445544", cursor: "pointer", fontSize: "10px", padding: "0" }}>⭐</button>
-                        <button onClick={function(e) { e.stopPropagation(); setPreviewVersions(function(prev) { return prev.filter(function(x) { return x.id !== v.id; }); }); if (activeVersion === v.id && previewVersions.length > 1) { var next = previewVersions.find(function(x) { return x.id !== v.id; }); if (next) { setPreviewHtml(next.html); setActiveVersion(next.id); } } }} style={{ background: "transparent", border: "none", color: "#ff4466", cursor: "pointer", fontSize: "10px", padding: "0" }}>🗑</button>
+                        <button onClick={function(e) { e.stopPropagation(); starPreviewVersion(v); }} style={{ background: "transparent", border: "none", color: v.starred ? "#ffcc00" : "#445544", cursor: "pointer", fontSize: "10px", padding: "0" }}>⭐</button>
+                        <button onClick={function(e) { e.stopPropagation(); deletePreviewVersion(v.id, idea.id); }} style={{ background: "transparent", border: "none", color: "#ff4466", cursor: "pointer", fontSize: "10px", padding: "0" }}>🗑</button>
                       </div>
                     </div>
                   );
