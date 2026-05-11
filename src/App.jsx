@@ -1027,25 +1027,47 @@ export default function App() {
 
             {/* Fichiers en attente */}
             <div style={{ marginBottom: "10px" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: pendingFiles.length > 0 ? "8px" : "0" }}>
-                <button onClick={function() { if (pendingFileInputRef.current) pendingFileInputRef.current.click(); }} style={{ background: "transparent", border: "1px solid " + f.color + "33", borderRadius: "3px", color: f.color + "88", padding: "5px 12px", cursor: "pointer", fontSize: "10px", letterSpacing: "0.06em", display: "flex", alignItems: "center", gap: "5px" }}>
-                  📎 JOINDRE UN FICHIER
+              <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: pendingFiles.length > 0 ? "10px" : "0" }}>
+                <button onClick={function() { if (pendingFileInputRef.current) pendingFileInputRef.current.click(); }} style={{ background: pendingFiles.length > 0 ? f.color + "12" : "transparent", border: "1px solid " + (pendingFiles.length > 0 ? f.color + "55" : f.color + "33"), borderRadius: "3px", color: pendingFiles.length > 0 ? f.color : f.color + "88", padding: "5px 12px", cursor: "pointer", fontSize: "10px", letterSpacing: "0.06em", display: "flex", alignItems: "center", gap: "6px", position: "relative", transition: "all 0.2s" }}>
+                  📎 JOINDRE
+                  {pendingFiles.length > 0 && (
+                    <span style={{ background: f.color, color: "#020e06", borderRadius: "50%", width: "16px", height: "16px", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "9px", fontWeight: "900", flexShrink: 0 }}>{pendingFiles.length}</span>
+                  )}
                 </button>
                 <input ref={pendingFileInputRef} type="file" multiple accept="*/*" style={{ display: "none" }} onChange={function(e) { var files = Array.from(e.target.files); setPendingFiles(function(prev) { return prev.concat(files); }); e.target.value = ""; }}/>
-                {pendingFiles.length > 0 && <span style={{ fontSize: "10px", color: f.color + "88", letterSpacing: "0.06em" }}>{pendingFiles.length} FICHIER(S) EN ATTENTE</span>}
               </div>
+
               {pendingFiles.length > 0 && (
-                <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
-                  {pendingFiles.map(function(file, idx) {
-                    return (
-                      <div key={idx} style={{ display: "flex", alignItems: "center", gap: "8px", background: "rgba(0,255,136,0.03)", border: "1px solid #00ff8812", borderRadius: "4px", padding: "6px 10px" }}>
-                        <span style={{ fontSize: "16px", flexShrink: 0 }}>{getFileIcon(file.name)}</span>
-                        <span style={{ flex: 1, fontSize: "11px", color: "#aaccbb", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{file.name}</span>
-                        <span style={{ fontSize: "9px", color: "#445544", flexShrink: 0 }}>{(file.size / 1024).toFixed(0)} Ko</span>
-                        <button onClick={function() { setPendingFiles(function(prev) { return prev.filter(function(_, i) { return i !== idx; }); }); }} style={{ background: "transparent", border: "none", color: "#ff6677", cursor: "pointer", fontSize: "12px", padding: "0 2px", flexShrink: 0 }}>✕</button>
-                      </div>
-                    );
-                  })}
+                <div>
+                  {/* Miniatures images */}
+                  {pendingFiles.some(function(f) { return isImage(f.name); }) && (
+                    <div style={{ display: "flex", gap: "6px", flexWrap: "wrap", marginBottom: "6px" }}>
+                      {pendingFiles.filter(function(fi) { return isImage(fi.name); }).map(function(file, idx) {
+                        var url = URL.createObjectURL(file);
+                        return (
+                          <div key={idx} style={{ position: "relative" }}>
+                            <img src={url} alt={file.name} style={{ width: "52px", height: "52px", objectFit: "cover", borderRadius: "4px", border: "1px solid " + f.color + "33" }}/>
+                            <button onClick={function() { setPendingFiles(function(prev) { return prev.filter(function(fi) { return fi !== file; }); }); }} style={{ position: "absolute", top: "-4px", right: "-4px", background: "#ff4466", border: "none", borderRadius: "50%", width: "14px", height: "14px", color: "#fff", cursor: "pointer", fontSize: "8px", display: "flex", alignItems: "center", justifyContent: "center", padding: 0 }}>✕</button>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                  {/* Autres fichiers */}
+                  {pendingFiles.filter(function(fi) { return !isImage(fi.name); }).length > 0 && (
+                    <div style={{ display: "flex", flexDirection: "column", gap: "3px" }}>
+                      {pendingFiles.filter(function(fi) { return !isImage(fi.name); }).map(function(file, idx) {
+                        return (
+                          <div key={idx} style={{ display: "flex", alignItems: "center", gap: "8px", background: "rgba(0,255,136,0.03)", border: "1px solid #00ff8812", borderRadius: "4px", padding: "5px 10px" }}>
+                            <span style={{ fontSize: "14px", flexShrink: 0 }}>{getFileIcon(file.name)}</span>
+                            <span style={{ flex: 1, fontSize: "11px", color: "#aaccbb", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{file.name}</span>
+                            <span style={{ fontSize: "9px", color: "#445544", flexShrink: 0 }}>{(file.size / 1024).toFixed(0)} Ko</span>
+                            <button onClick={function() { setPendingFiles(function(prev) { return prev.filter(function(fi) { return fi !== file; }); }); }} style={{ background: "transparent", border: "none", color: "#ff6677", cursor: "pointer", fontSize: "12px", padding: "0 2px", flexShrink: 0 }}>✕</button>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
               )}
             </div>
