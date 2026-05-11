@@ -898,6 +898,7 @@ export default function App() {
           </div>
         )}
 
+        </div>
         )} {/* fin docTab analyser */}
 
         {docTab === "sauvegardes" && (
@@ -932,7 +933,7 @@ export default function App() {
               </div>
             )}
           </div>
-        )}
+        )} {/* fin sauvegardes */}
 
         {/* Modal plein écran résultat */}
         {docExpanded && docResult && (
