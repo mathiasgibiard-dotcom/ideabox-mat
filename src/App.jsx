@@ -331,6 +331,10 @@ export default function App() {
   var showIdeaDownload = showIdeaDownloadState[0];
   var setShowIdeaDownload = showIdeaDownloadState[1];
 
+  var modelState = useState("claude-opus-4-7");
+  var selectedModel = modelState[0];
+  var setSelectedModel = modelState[1];
+
   var editExpandedState = useState(false);
   var editExpanded = editExpandedState[0];
   var setEditExpanded = editExpandedState[1];
@@ -460,7 +464,7 @@ export default function App() {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        model: "claude-opus-4-7", max_tokens: 4000,
+        model: selectedModel, max_tokens: 4000,
         system: buildPrompt(folderId || "libre"),
         messages: [{ role: "user", content: truncated }],
       }),
@@ -1180,6 +1184,22 @@ export default function App() {
               placeholder={"Decris ton idee de " + f.label.toLowerCase() + "..."}
               style={{ width: "100%", minHeight: "120px", background: "#020e06", border: "1px solid " + f.color + "18", borderRadius: "4px", color: "#c8ffd4", fontSize: "14px", fontFamily: "inherit", lineHeight: "1.7", padding: "12px 14px", resize: "vertical", outline: "none", boxSizing: "border-box", marginBottom: "10px" }}
             />
+
+            {/* Sélecteur de modèle */}
+            <div style={{ display: "flex", gap: "6px", marginBottom: "10px" }}>
+              {[
+                { id: "claude-sonnet-4-6", label: "⚡ SONNET", desc: "Rapide", color: "#00aaff" },
+                { id: "claude-opus-4-7", label: "🧠 OPUS", desc: "Puissant", color: "#cc88ff" },
+              ].map(function(m) {
+                var active = selectedModel === m.id;
+                return (
+                  <button key={m.id} onClick={function() { setSelectedModel(m.id); }} style={{ flex: 1, background: active ? m.color + "15" : "transparent", border: "1px solid " + (active ? m.color + "66" : f.color + "15"), borderRadius: "4px", padding: "6px", cursor: "pointer", transition: "all 0.2s" }}>
+                    <div style={{ fontSize: "11px", fontWeight: "700", color: active ? m.color : "#556655", letterSpacing: "0.06em" }}>{m.label}</div>
+                    <div style={{ fontSize: "9px", color: active ? m.color + "99" : "#334433", marginTop: "1px" }}>{m.desc}</div>
+                  </button>
+                );
+              })}
+            </div>
 
             {/* Fichiers en attente */}
             <div style={{ marginBottom: "10px" }}>
