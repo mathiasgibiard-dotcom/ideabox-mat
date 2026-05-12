@@ -268,6 +268,10 @@ export default function App() {
   var pendingFiles = pendingFilesState[0];
   var setPendingFiles = pendingFilesState[1];
 
+  var extractingState = useState(false);
+  var isExtractingFiles = extractingState[0];
+  var setIsExtractingFiles = extractingState[1];
+
   var previewState = useState(null);
   var previewHtml = previewState[0];
   var setPreviewHtml = previewState[1];
@@ -478,6 +482,55 @@ export default function App() {
     });
   }
 
+  function extractFilesContent(files) {
+    if (!files || files.length === 0) return Promise.resolve("");
+    setIsExtractingFiles(true);
+    return Promise.all(files.map(function(f) {
+      return readFileAsText(f).then(function(text) {
+        return "\n\n--- FICHIER : " + f.name + " ---\n" + (text || "[contenu vide]");
+      });
+    })).then(function(contents) {
+      setIsExtractingFiles(false);
+      return contents.join("\n");
+    }).catch(function() {
+      setIsExtractingFiles(false);
+      return "";
+    });
+  }
+
+  function generateIdeaWithFiles() {
+    if (!rawInput.trim()) return;
+    if (pendingFiles.length === 0) { generateIdea(); return; }
+    setIsProcessing(true);
+    showToast("Lecture des fichiers...");
+    extractFilesContent(pendingFiles).then(function(filesContent) {
+      var enrichedText = rawInput + (filesContent ? "\n\n=== FICHIERS JOINTS ===\n" + filesContent : "");
+      callAI(enrichedText, selectedFolder ? selectedFolder.id : "libre").then(function(parsed) {
+        var idea = {
+          id: Date.now(), raw: rawInput,
+          titre: parsed.titre || "Nouvelle idee",
+          concept: parsed.concept || "",
+          fonctionnalites: parsed.fonctionnalites || [],
+          folder: parsed.folder || (selectedFolder ? selectedFolder.label : "Libre"),
+          folderColor: selectedFolder ? selectedFolder.color : "#00ff88",
+          status: "idee", priority: parsed.priority || "moyenne",
+          tags: parsed.tags || [], prompt: parsed.prompt || "",
+          date: new Date().toLocaleDateString("fr-FR"), ts: Date.now(),
+        };
+        return insertIdea(idea).then(function(saved) {
+          var finalIdea = saved || idea;
+          uploadFiles(finalIdea.id, pendingFiles);
+          setPendingFiles([]);
+          setRawInput("");
+          setActiveIdea(finalIdea);
+          setScreen("idea_detail");
+          showToast("Idee generee avec " + pendingFiles.length + " fichier(s) !");
+          setIsProcessing(false);
+        });
+      }).catch(function() { showToast("Erreur IA", "err"); setIsProcessing(false); });
+    });
+  }
+
   function generateIdea() {
     if (!rawInput.trim()) return;
     callAI(rawInput, selectedFolder ? selectedFolder.id : "libre").then(function(parsed) {
@@ -541,6 +594,41 @@ export default function App() {
       showToast("Idee sauvegardee — enrichis-la quand tu veux !");
     }).catch(function() {
       showToast("Erreur sauvegarde", "err");
+    });
+  }
+
+  function regenerateIdeaWithFiles(idea) {
+    if (!editText.trim()) return;
+    var files = ideaFiles[String(idea.id)] || [];
+    if (files.length === 0) { regenerateIdea(idea); return; }
+    setIsProcessing(true);
+    showToast("Lecture des fichiers joints...");
+    // Télécharger et lire les fichiers depuis Supabase
+    Promise.all(files.map(function(f) {
+      var url = getFileUrl(idea.id, f.name);
+      return fetch(url).then(function(r) { return r.text(); }).then(function(text) {
+        return "\n\n--- FICHIER : " + f.name.replace(/^\d+_/, "") + " ---\n" + text.slice(0, 3000);
+      }).catch(function() { return ""; });
+    })).then(function(contents) {
+      var filesContent = contents.filter(Boolean).join("\n");
+      var enrichedText = editText + (filesContent ? "\n\n=== FICHIERS JOINTS ===\n" + filesContent : "");
+      var folderId = selectedFolder ? selectedFolder.id : (idea.folder || "libre").toLowerCase().replace(/\s/g, "-");
+      callAI(enrichedText, folderId).then(function(parsed) {
+        var fields = {
+          raw: editText,
+          titre: parsed.titre || idea.titre,
+          concept: parsed.concept || "",
+          fonctionnalites: parsed.fonctionnalites || [],
+          folder: parsed.folder || idea.folder,
+          priority: parsed.priority || idea.priority,
+          tags: parsed.tags || [],
+          prompt: parsed.prompt || "",
+        };
+        updateIdea(idea.id, fields);
+        setEditMode(false); setEditText(""); setEditingId(null);
+        showToast("Regenere avec " + files.length + " fichier(s) !");
+        setIsProcessing(false);
+      }).catch(function() { showToast("Erreur IA", "err"); setIsProcessing(false); });
     });
   }
 
@@ -1255,8 +1343,8 @@ export default function App() {
               <button onClick={saveRawIdea} disabled={!rawInput.trim() || isProcessing} style={{ background: rawInput.trim() && !isProcessing ? "rgba(0,255,136,0.06)" : "transparent", border: "1px solid " + (rawInput.trim() && !isProcessing ? "#00ff8844" : "#00ff8815"), borderRadius: "4px", color: rawInput.trim() && !isProcessing ? "#00ff88" : "#445544", padding: "10px 14px", cursor: rawInput.trim() && !isProcessing ? "pointer" : "not-allowed", fontSize: "11px", fontWeight: "700", letterSpacing: "0.08em", whiteSpace: "nowrap", transition: "all 0.2s" }}>
                 💾 SAUV.
               </button>
-              <button onClick={generateIdea} disabled={!rawInput.trim() || isProcessing} style={{ flex: 1, background: rawInput.trim() && !isProcessing ? f.color + "18" : "transparent", border: "1px solid " + (rawInput.trim() && !isProcessing ? f.color : f.color + "20"), borderRadius: "4px", color: rawInput.trim() && !isProcessing ? f.color : "#88bbaa", padding: "10px", cursor: rawInput.trim() && !isProcessing ? "pointer" : "not-allowed", fontSize: "12px", fontWeight: "700", letterSpacing: "0.1em", textShadow: rawInput.trim() && !isProcessing ? "0 0 14px " + f.color : "none", transition: "all 0.2s" }}>
-                {isProcessing ? "GENERATION..." : "GENERER — " + f.label.toUpperCase()}
+              <button onClick={pendingFiles.length > 0 ? generateIdeaWithFiles : generateIdea} disabled={!rawInput.trim() || isProcessing || isExtractingFiles} style={{ flex: 1, background: rawInput.trim() && !isProcessing ? f.color + "18" : "transparent", border: "1px solid " + (rawInput.trim() && !isProcessing ? f.color : f.color + "20"), borderRadius: "4px", color: rawInput.trim() && !isProcessing ? f.color : "#88bbaa", padding: "10px", cursor: rawInput.trim() && !isProcessing ? "pointer" : "not-allowed", fontSize: "12px", fontWeight: "700", letterSpacing: "0.1em", textShadow: rawInput.trim() && !isProcessing ? "0 0 14px " + f.color : "none", transition: "all 0.2s" }}>
+                {isExtractingFiles ? "LECTURE FICHIERS..." : isProcessing ? "GENERATION..." : pendingFiles.length > 0 ? "GENERER + FICHIERS (" + pendingFiles.length + ") — " + f.label.toUpperCase() : "GENERER — " + f.label.toUpperCase()}
               </button>
             </div>
           </div>
@@ -1399,6 +1487,11 @@ export default function App() {
                   <button onClick={function() { regenerateIdea(idea); }} disabled={!editText.trim() || isProcessing} style={{ flex: 1, background: editText.trim() && !isProcessing ? fc + "18" : "transparent", border: "1px solid " + (editText.trim() && !isProcessing ? fc : fc + "20"), borderRadius: "4px", color: editText.trim() && !isProcessing ? fc : "#88bbaa", padding: "8px", cursor: editText.trim() && !isProcessing ? "pointer" : "not-allowed", fontSize: "12px", fontWeight: "700", letterSpacing: "0.08em", textShadow: editText.trim() && !isProcessing ? "0 0 10px " + fc : "none", transition: "all 0.2s" }}>
                     {isProcessing ? "REGENERATION..." : "⚡ REGENERER AVEC L'IA"}
                   </button>
+                  {(ideaFiles[String(idea.id)] || []).length > 0 && (
+                    <button onClick={function() { regenerateIdeaWithFiles(idea); }} disabled={!editText.trim() || isProcessing} style={{ background: editText.trim() && !isProcessing ? "rgba(0,170,255,0.1)" : "transparent", border: "1px solid " + (editText.trim() && !isProcessing ? "#00aaff55" : "#00aaff15"), borderRadius: "4px", color: editText.trim() && !isProcessing ? "#00aaff" : "#445566", padding: "8px 10px", cursor: editText.trim() && !isProcessing ? "pointer" : "not-allowed", fontSize: "10px", fontWeight: "700", letterSpacing: "0.04em", whiteSpace: "nowrap", transition: "all 0.2s" }} title={"Regenerer en incluant les " + (ideaFiles[String(idea.id)] || []).length + " fichier(s) joints"}>
+                      📄 +FICHIERS
+                    </button>
+                  )}
                 </div>
               </div>
             )}
