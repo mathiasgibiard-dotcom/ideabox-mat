@@ -617,12 +617,12 @@ export default function App() {
         var fields = {
           raw: editText,
           titre: parsed.titre || idea.titre,
-          concept: parsed.concept || "",
-          fonctionnalites: parsed.fonctionnalites || [],
+          concept: parsed.concept || idea.concept,
+          fonctionnalites: parsed.fonctionnalites && parsed.fonctionnalites.length > 0 ? parsed.fonctionnalites : idea.fonctionnalites,
           folder: parsed.folder || idea.folder,
           priority: parsed.priority || idea.priority,
-          tags: parsed.tags || [],
-          prompt: parsed.prompt || "",
+          tags: parsed.tags && parsed.tags.length > 0 ? parsed.tags : idea.tags,
+          prompt: parsed.prompt || idea.prompt,
         };
         updateIdea(idea.id, fields);
         setEditMode(false); setEditText(""); setEditingId(null);
@@ -639,12 +639,12 @@ export default function App() {
       var fields = {
         raw: editText,
         titre: parsed.titre || idea.titre,
-        concept: parsed.concept || "",
-        fonctionnalites: parsed.fonctionnalites || [],
+        concept: parsed.concept || idea.concept,
+        fonctionnalites: parsed.fonctionnalites && parsed.fonctionnalites.length > 0 ? parsed.fonctionnalites : idea.fonctionnalites,
         status: idea.status,
         priority: parsed.priority || idea.priority,
-        tags: parsed.tags || [],
-        prompt: parsed.prompt || "",
+        tags: parsed.tags && parsed.tags.length > 0 ? parsed.tags : idea.tags,
+        prompt: parsed.prompt || idea.prompt,
       };
       updateIdea(idea.id, fields);
       setEditMode(false);
