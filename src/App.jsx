@@ -603,26 +603,49 @@ export default function App() {
     if (files.length === 0) { regenerateIdea(idea); return; }
     setIsProcessing(true);
     showToast("Lecture des fichiers joints...");
-    // Télécharger et lire les fichiers depuis Supabase
+
+    // Télécharger chaque fichier depuis Supabase, convertir en base64, envoyer à /api/extract
     Promise.all(files.map(function(f) {
       var url = getFileUrl(idea.id, f.name);
-      return fetch(url).then(function(r) { return r.text(); }).then(function(text) {
-        return "\n\n--- FICHIER : " + f.name.replace(/^\d+_/, "") + " ---\n" + text.slice(0, 3000);
-      }).catch(function() { return ""; });
+      var displayName = f.name.replace(/^\d+_/, "");
+      return fetch(url)
+        .then(function(r) { return r.blob(); })
+        .then(function(blob) {
+          return new Promise(function(resolve) {
+            var reader = new FileReader();
+            reader.onload = function(e) {
+              var base64 = e.target.result.split(",")[1];
+              fetch("/api/extract", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ filename: displayName, base64: base64, mimetype: blob.type }),
+              }).then(function(r) { return r.json(); })
+                .then(function(data) { resolve("--- " + displayName + " ---\n" + (data.text || "")); })
+                .catch(function() { resolve("--- " + displayName + " ---\n[erreur lecture]"); });
+            };
+            reader.onerror = function() { resolve("--- " + displayName + " ---\n[erreur]"); };
+            reader.readAsDataURL(blob);
+          });
+        })
+        .catch(function() { return "--- " + f.name + " ---\n[fichier inaccessible]"; });
     })).then(function(contents) {
-      var filesContent = contents.filter(Boolean).join("\n");
-      var enrichedText = editText + (filesContent ? "\n\n=== FICHIERS JOINTS ===\n" + filesContent : "");
-      var folderId = selectedFolder ? selectedFolder.id : (idea.folder || "libre").toLowerCase().replace(/\s/g, "-");
+      var filesContent = contents.filter(function(c) { return c && c.length > 20; }).join("\n\n");
+      if (!filesContent) { showToast("Fichiers illisibles, regeneration sans fichiers"); regenerateIdea(idea); return; }
+
+      var enrichedText = editText + "\n\n=== CONTENU DES FICHIERS JOINTS ===\n" + filesContent;
+      var folderId = (FOLDERS.find(function(f) { return f.label === idea.folder; }) || { id: "libre" }).id;
+
       callAI(enrichedText, folderId).then(function(parsed) {
+        // Protection absolue : jamais écraser par une valeur vide
         var fields = {
           raw: editText,
-          titre: parsed.titre || idea.titre,
-          concept: parsed.concept || idea.concept,
+          titre: parsed.titre && parsed.titre.length > 2 ? parsed.titre : idea.titre,
+          concept: parsed.concept && parsed.concept.length > 10 ? parsed.concept : idea.concept,
           fonctionnalites: parsed.fonctionnalites && parsed.fonctionnalites.length > 0 ? parsed.fonctionnalites : idea.fonctionnalites,
-          folder: parsed.folder || idea.folder,
+          status: idea.status,
           priority: parsed.priority || idea.priority,
           tags: parsed.tags && parsed.tags.length > 0 ? parsed.tags : idea.tags,
-          prompt: parsed.prompt || idea.prompt,
+          prompt: parsed.prompt && parsed.prompt.length > 20 ? parsed.prompt : idea.prompt,
         };
         updateIdea(idea.id, fields);
         setEditMode(false); setEditText(""); setEditingId(null);
