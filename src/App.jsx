@@ -1374,6 +1374,21 @@ export default function App() {
                 <textarea ref={editRef} value={editText} onChange={function(e) { setEditText(e.target.value); }}
                   style={{ width: "100%", minHeight: "100px", background: "#020e06", border: "1px solid " + fc + "33", borderRadius: "4px", color: "#c8ffd4", fontSize: "13px", fontFamily: "inherit", lineHeight: "1.7", padding: "10px 14px", resize: "vertical", outline: "none", boxSizing: "border-box", marginBottom: "10px" }}
                 />
+                {/* Sélecteur modèle */}
+                <div style={{ display: "flex", gap: "6px", marginBottom: "8px" }}>
+                  {[
+                    { id: "claude-sonnet-4-6", label: "⚡ SONNET", desc: "Rapide", color: "#00aaff" },
+                    { id: "claude-opus-4-7", label: "🧠 OPUS", desc: "Puissant", color: "#cc88ff" },
+                  ].map(function(m) {
+                    var active = selectedModel === m.id;
+                    return (
+                      <button key={m.id} onClick={function() { setSelectedModel(m.id); }} style={{ flex: 1, background: active ? m.color + "15" : "transparent", border: "1px solid " + (active ? m.color + "55" : fc + "15"), borderRadius: "4px", padding: "5px", cursor: "pointer", transition: "all 0.2s" }}>
+                        <div style={{ fontSize: "10px", fontWeight: "700", color: active ? m.color : "#556655", letterSpacing: "0.06em" }}>{m.label}</div>
+                        <div style={{ fontSize: "8px", color: active ? m.color + "99" : "#334433", marginTop: "1px" }}>{m.desc}</div>
+                      </button>
+                    );
+                  })}
+                </div>
                 <div style={{ display: "flex", gap: "8px" }}>
                   <button onClick={isRecording ? stopRecording : function() { startRecording(setEditText); }} style={{ background: isRecording ? "#ff446615" : "transparent", border: isRecording ? "1px solid #ff446644" : "1px solid " + fc + "22", borderRadius: "4px", color: isRecording ? "#ff8899" : fc + "88", padding: "8px 14px", cursor: "pointer", fontSize: "12px", display: "flex", alignItems: "center", gap: "6px" }}>
                     🎤 {isRecording ? "STOP" : "VOCAL"}
