@@ -1264,10 +1264,15 @@ export default function App() {
               <span style={{ fontSize: "13px", color: "#00aaff", fontWeight: "700", letterSpacing: "0.1em" }}>
                 {docMode === "resumer" ? "📋 RESUME" : docMode === "analyser" ? "🔍 ANALYSE" : "✨ DOCUMENT RESTRUCTURE"}
               </span>
-              <div style={{ display: "flex", gap: "8px" }}>
-                <button onClick={function() { navigator.clipboard.writeText(docResult); showToast("Copie !"); }} style={{ background: "transparent", border: "1px solid #00aaff33", borderRadius: "4px", color: "#00aaff88", padding: "6px 12px", cursor: "pointer", fontSize: "10px" }}>COPIER</button>
+              <div style={{ display: "flex", gap: "6px", flexWrap: "wrap", justifyContent: "flex-end" }}>
+                <button onClick={function() { navigator.clipboard.writeText(docResult); showToast("Copie !"); }} style={{ background: "transparent", border: "1px solid #00aaff33", borderRadius: "4px", color: "#00aaff88", padding: "6px 10px", cursor: "pointer", fontSize: "10px" }}>COPIER</button>
+                <button onClick={function() {
+                  var fakeDoc = { titre: docMode === "resumer" ? "Résumé" : docMode === "analyser" ? "Analyse" : "Document restructuré", contenu: docResult };
+                  setDocExpanded(false);
+                  generatePromptFromDoc(fakeDoc);
+                }} disabled={isAnalyzing} style={{ background: isAnalyzing ? "transparent" : "rgba(255,165,0,0.1)", border: "1px solid " + (isAnalyzing ? "#ffaa4422" : "#ffaa4466"), borderRadius: "4px", color: isAnalyzing ? "#88bbaa" : "#ffaa44", padding: "6px 10px", cursor: isAnalyzing ? "not-allowed" : "pointer", fontSize: "10px", fontWeight: "700" }}>🎯 PROMPT</button>
                 <div style={{ position: "relative" }}>
-                  <button onClick={function() { setShowDownloadMenu(function(v) { return !v; }); }} style={{ background: "rgba(0,170,255,0.1)", border: "1px solid #00aaff55", borderRadius: "4px", color: "#00aaff", padding: "6px 12px", cursor: "pointer", fontSize: "10px", fontWeight: "700" }}>⬇ FORMAT ▾</button>
+                  <button onClick={function() { setShowDownloadMenu(function(v) { return !v; }); }} style={{ background: "rgba(0,170,255,0.1)", border: "1px solid #00aaff55", borderRadius: "4px", color: "#00aaff", padding: "6px 10px", cursor: "pointer", fontSize: "10px", fontWeight: "700" }}>⬇ FORMAT ▾</button>
                   {showDownloadMenu && (
                     <div style={{ position: "absolute", right: 0, top: "110%", background: "#020e06", border: "1px solid #00aaff33", borderRadius: "4px", zIndex: 50, minWidth: "130px", overflow: "hidden" }}>
                       {[{f:"md", label:"📝 Markdown"}, {f:"txt", label:"📄 Texte .txt"}, {f:"html", label:"🌐 HTML"}].map(function(item) {
@@ -1276,7 +1281,7 @@ export default function App() {
                     </div>
                   )}
                 </div>
-                <button onClick={function() { setDocExpanded(false); setShowDownloadMenu(false); }} style={{ background: "transparent", border: "1px solid #ff446644", borderRadius: "4px", color: "#ff8899", padding: "6px 12px", cursor: "pointer", fontSize: "12px" }}>✕ FERMER</button>
+                <button onClick={function() { setDocExpanded(false); setShowDownloadMenu(false); }} style={{ background: "rgba(255,68,102,0.08)", border: "1px solid #ff446644", borderRadius: "4px", color: "#ff8899", padding: "6px 12px", cursor: "pointer", fontSize: "12px", fontWeight: "700" }}>✕ FERMER</button>
               </div>
             </div>
             <div style={{ flex: 1, overflowY: "auto", padding: "24px", maxWidth: "800px", margin: "0 auto", width: "100%" }}>
