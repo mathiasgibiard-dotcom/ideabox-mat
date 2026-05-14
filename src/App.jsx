@@ -925,6 +925,43 @@ export default function App() {
     }).catch(function() { showToast("Erreur suppression", "err"); });
   }
 
+  function generatePromptFromDoc(doc) {
+    setIsAnalyzing(true);
+    showToast("Génération du prompt...");
+    var systemPrompt = "Tu es un expert en rédaction de prompts professionnels pour agents IA. Tu dois générer un prompt ULTRA PRÉCIS, STRUCTURÉ et OPÉRATIONNEL à partir d'un document fourni. Le prompt doit être directement utilisable dans un agent IA (OpenClaw, Claude, etc.) sans aucune modification. Structure le prompt avec : CONTEXTE, OBJECTIF PRINCIPAL, FONCTIONNALITÉS DÉTAILLÉES, CONTRAINTES TECHNIQUES, LIVRABLES ATTENDUS, ÉTAPES D'EXÉCUTION. Sois exhaustif, précis, et n'omets aucun détail important du document source.";
+    var userMsg = "Voici le document à transformer en prompt opérationnel :\n\n" + doc.contenu;
+    fetch("/api/claude", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ model: "claude-opus-4-7", max_tokens: 4000, system: systemPrompt, messages: [{ role: "user", content: userMsg }] }),
+    }).then(function(r) { return r.json(); }).then(function(data) {
+      var prompt = data.content && data.content[0] ? data.content[0].text : "";
+      setIsAnalyzing(false);
+      if (prompt) {
+        // Sauvegarder comme nouveau doc
+        var newDoc = {
+          id: Date.now(),
+          titre: "🎯 Prompt — " + doc.titre,
+          mode: "resumer",
+          contenu: prompt,
+          date: new Date().toLocaleDateString("fr-FR"),
+          ts: Date.now(),
+        };
+        sbFetch("saved_docs", "POST", newDoc).then(function() {
+          setSavedDocs(function(prev) { return [newDoc].concat(prev); });
+          // Copier dans le presse-papier
+          navigator.clipboard.writeText(prompt).catch(function() {});
+          showToast("Prompt généré et copié ! 🎯");
+        });
+      } else {
+        showToast("Erreur génération", "err");
+      }
+    }).catch(function() {
+      setIsAnalyzing(false);
+      showToast("Erreur IA", "err");
+    });
+  }
+
   function renderMarkdown(text) {
     return text
       .replace(/^### (.+)$/gm, "<h3 style='color:#00aaff;font-size:13px;margin:14px 0 6px;letter-spacing:0.08em'>$1</h3>")
@@ -1204,6 +1241,7 @@ export default function App() {
                         </div>
                         <div style={{ display: "flex", gap: "6px" }}>
                           <button onClick={function() { setDocResult(doc.contenu); setDocExpanded(true); setDocTab("analyser"); }} style={{ background: "transparent", border: "1px solid #00aaff33", borderRadius: "3px", color: "#00aaff77", padding: "4px 8px", cursor: "pointer", fontSize: "10px" }}>👁 VOIR</button>
+                          <button onClick={function() { generatePromptFromDoc(doc); }} disabled={isAnalyzing} style={{ background: isAnalyzing ? "transparent" : "rgba(255,165,0,0.1)", border: "1px solid " + (isAnalyzing ? "#ffaa4422" : "#ffaa4466"), borderRadius: "3px", color: isAnalyzing ? "#88bbaa" : "#ffaa44", padding: "4px 8px", cursor: isAnalyzing ? "not-allowed" : "pointer", fontSize: "10px", fontWeight: "700" }}>🎯 PROMPT</button>
                           <button onClick={function() { navigator.clipboard.writeText(doc.contenu); showToast("Copié !"); }} style={{ background: "transparent", border: "1px solid #00aaff22", borderRadius: "3px", color: "#00aaff55", padding: "4px 8px", cursor: "pointer", fontSize: "10px" }}>COPIER</button>
                           <button onClick={function() { deleteSavedDoc(doc.id); }} style={{ background: "transparent", border: "1px solid #ff446633", borderRadius: "3px", color: "#ff6677", padding: "4px 8px", cursor: "pointer", fontSize: "11px" }}>🗑</button>
                         </div>
