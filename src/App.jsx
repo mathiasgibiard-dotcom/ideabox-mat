@@ -131,21 +131,27 @@ function PinScreen({ onUnlock }) {
   var setPinError = pinErrorState[1];
 
   function handleDigit(n) {
-    if (pinInput.length >= 4) return;
+    if (pinInput.length >= 5) return;
     var next = pinInput + n;
     setPinInput(next);
     setPinError(false);
-    if (next.length === 4) {
-      if (next === "1102") { sessionStorage.setItem("ideabox_auth", "ok"); onUnlock(); }
-      else { setPinError(true); setTimeout(function() { setPinInput(""); setPinError(false); }, 800); }
-    }
+    if (next.toLowerCase() === "cyber") { sessionStorage.setItem("ideabox_auth", "ok"); onUnlock(); }
+    else if (next.length >= 5) { setPinError(true); setTimeout(function() { setPinInput(""); setPinError(false); }, 800); }
   }
 
   useEffect(function() {
     function handleKey(e) {
-      if (e.key >= "0" && e.key <= "9") { handleDigit(e.key); }
-      else if (e.key === "Backspace") { setPinInput(function(p) { return p.slice(0,-1); }); setPinError(false); }
-      else if (e.key === "Escape") { setPinInput(""); setPinError(false); }
+      if (e.key === "Backspace") { setPinInput(function(p) { return p.slice(0,-1); }); setPinError(false); return; }
+      if (e.key === "Escape") { setPinInput(""); setPinError(false); return; }
+      if (e.key.length === 1 && /[a-zA-Z]/.test(e.key)) {
+        setPinInput(function(prev) {
+          if (prev.length >= 5) return prev;
+          var next = prev + e.key.toLowerCase();
+          if (next === "cyber") { setTimeout(function() { sessionStorage.setItem("ideabox_auth", "ok"); onUnlock(); }, 100); }
+          else if (next.length >= 5) { setTimeout(function() { setPinError(true); setTimeout(function() { setPinInput(""); setPinError(false); }, 800); }, 0); }
+          return next;
+        });
+      }
     }
     window.addEventListener("keydown", handleKey);
     return function() { window.removeEventListener("keydown", handleKey); };
@@ -153,25 +159,25 @@ function PinScreen({ onUnlock }) {
 
   return (
     <div style={{ minHeight: "100vh", background: "#020e06", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'Courier New', monospace" }}>
-      <div style={{ textAlign: "center", padding: "40px 32px", background: "rgba(2,14,8,0.95)", border: "1px solid #00ff8822", borderRadius: "12px", width: "280px" }}>
+      <div style={{ textAlign: "center", padding: "40px 32px", background: "rgba(2,14,8,0.95)", border: "1px solid #00ff8822", borderRadius: "12px", width: "300px" }}>
         <div style={{ fontSize: "28px", marginBottom: "8px" }}>🔒</div>
         <div style={{ fontSize: "16px", fontWeight: "700", color: "#00ff88", letterSpacing: "0.15em", textShadow: "0 0 20px #00ff88", marginBottom: "4px" }}>IDEA_BOX</div>
         <div style={{ fontSize: "10px", color: "#88bbaa", letterSpacing: "0.2em", marginBottom: "28px" }}>CODE D'ACCES</div>
-        <div style={{ display: "flex", gap: "10px", justifyContent: "center", marginBottom: "20px" }}>
-          {[0,1,2,3].map(function(i) {
-            return <div key={i} style={{ width: "44px", height: "52px", background: pinInput.length > i ? "rgba(0,255,136,0.15)" : "rgba(0,255,136,0.04)", border: "1px solid " + (pinError ? "#ff4466" : pinInput.length > i ? "#00ff88" : "#00ff8833"), borderRadius: "6px", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "22px", color: "#00ff88", transition: "all 0.2s" }}>{pinInput.length > i ? "●" : ""}</div>;
+        <div style={{ display: "flex", gap: "8px", justifyContent: "center", marginBottom: "20px" }}>
+          {[0,1,2,3,4].map(function(i) {
+            return <div key={i} style={{ width: "40px", height: "48px", background: pinInput.length > i ? "rgba(0,255,136,0.15)" : "rgba(0,255,136,0.04)", border: "1px solid " + (pinError ? "#ff4466" : pinInput.length > i ? "#00ff88" : "#00ff8833"), borderRadius: "6px", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "20px", color: "#00ff88", transition: "all 0.2s" }}>{pinInput.length > i ? "●" : ""}</div>;
           })}
         </div>
         {pinError && <div style={{ fontSize: "10px", color: "#ff4466", letterSpacing: "0.1em", marginBottom: "14px" }}>CODE INCORRECT</div>}
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "8px", marginBottom: "8px" }}>
-          {["1","2","3","4","5","6","7","8","9"].map(function(n) {
-            return <button key={n} onClick={function() { handleDigit(n); }} style={{ background: "rgba(0,255,136,0.06)", border: "1px solid #00ff8822", borderRadius: "6px", color: "#c8ffd4", fontSize: "18px", fontWeight: "700", padding: "14px", cursor: "pointer", fontFamily: "inherit" }}>{n}</button>;
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: "6px", marginBottom: "8px" }}>
+          {"ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("").slice(0, 25).map(function(l) {
+            return <button key={l} onClick={function() { handleDigit(l.toLowerCase()); }} style={{ background: "rgba(0,255,136,0.06)", border: "1px solid #00ff8822", borderRadius: "5px", color: "#c8ffd4", fontSize: "12px", fontWeight: "700", padding: "8px 4px", cursor: "pointer", fontFamily: "inherit" }}>{l}</button>;
           })}
         </div>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "8px" }}>
-          <button onClick={function() { setPinInput(""); setPinError(false); }} style={{ background: "transparent", border: "1px solid #ff446622", borderRadius: "6px", color: "#ff8899", fontSize: "12px", padding: "14px", cursor: "pointer", fontFamily: "inherit" }}>C</button>
-          <button onClick={function() { handleDigit("0"); }} style={{ background: "rgba(0,255,136,0.06)", border: "1px solid #00ff8822", borderRadius: "6px", color: "#c8ffd4", fontSize: "18px", fontWeight: "700", padding: "14px", cursor: "pointer", fontFamily: "inherit" }}>0</button>
-          <button onClick={function() { setPinInput(function(p) { return p.slice(0,-1); }); setPinError(false); }} style={{ background: "transparent", border: "1px solid #00ff8815", borderRadius: "6px", color: "#88bbaa", fontSize: "16px", padding: "14px", cursor: "pointer", fontFamily: "inherit" }}>⌫</button>
+        <div style={{ display: "flex", gap: "6px" }}>
+          <button onClick={function() { handleDigit("z"); }} style={{ flex: 1, background: "rgba(0,255,136,0.06)", border: "1px solid #00ff8822", borderRadius: "5px", color: "#c8ffd4", fontSize: "12px", fontWeight: "700", padding: "8px", cursor: "pointer", fontFamily: "inherit" }}>Z</button>
+          <button onClick={function() { setPinInput(""); setPinError(false); }} style={{ flex: 1, background: "transparent", border: "1px solid #ff446622", borderRadius: "5px", color: "#ff8899", fontSize: "11px", padding: "8px", cursor: "pointer", fontFamily: "inherit" }}>C</button>
+          <button onClick={function() { setPinInput(function(p) { return p.slice(0,-1); }); setPinError(false); }} style={{ flex: 1, background: "transparent", border: "1px solid #00ff8815", borderRadius: "5px", color: "#88bbaa", fontSize: "14px", padding: "8px", cursor: "pointer", fontFamily: "inherit" }}>⌫</button>
         </div>
       </div>
     </div>
@@ -729,7 +735,7 @@ export default function App() {
     sbFetch("preview_versions?idea_id=eq." + ideaId + "&select=*&order=ts.desc").then(function(data) {
       if (Array.isArray(data)) {
         setPreviewVersions(data);
-        if (data.length > 0) { setActiveVersion(data[0].id); setPreviewHtml(data[0].html); }
+        if (data.length > 0) { setActiveVersion(data[0].id); }
       }
     }).catch(function() {});
   }
