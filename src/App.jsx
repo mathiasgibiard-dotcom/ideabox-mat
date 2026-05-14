@@ -1070,7 +1070,10 @@ export default function App() {
 
         {/* Titre + onglets */}
         <div style={{ marginBottom: "16px" }}>
-          <div style={{ fontSize: "16px", fontWeight: "700", color: "#00aaff", textShadow: "0 0 20px #00aaff, 0 0 40px #00aaff66", letterSpacing: "0.08em", marginBottom: "10px" }}>📄 GESTIONNAIRE DOCS</div>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "10px" }}>
+            <div style={{ fontSize: "16px", fontWeight: "700", color: "#00aaff", textShadow: "0 0 20px #00aaff, 0 0 40px #00aaff66", letterSpacing: "0.08em" }}>📄 GESTIONNAIRE DOCS</div>
+            {docResult && <button onClick={function() { setDocResult(null); setUploadedDocs([]); setDocTab("analyser"); }} style={{ background: "rgba(0,170,255,0.1)", border: "1px solid #00aaff44", borderRadius: "4px", color: "#00aaff", padding: "5px 12px", cursor: "pointer", fontSize: "10px", fontWeight: "700" }}>+ NOUVELLE ANALYSE</button>}
+          </div>
           <div style={{ display: "flex", gap: "6px" }}>
             <button onClick={function() { setDocTab("analyser"); }} style={{ flex: 1, background: docTab === "analyser" ? "rgba(0,170,255,0.1)" : "transparent", border: "1px solid " + (docTab === "analyser" ? "#00aaff55" : "#00aaff15"), borderRadius: "5px", color: docTab === "analyser" ? "#00aaff" : "#88bbaa", padding: "8px", cursor: "pointer", fontSize: "11px", fontWeight: "700", letterSpacing: "0.06em" }}>⚡ ANALYSER</button>
             <button onClick={function() { setDocTab("sauvegardes"); loadSavedDocs(); }} style={{ flex: 1, background: docTab === "sauvegardes" ? "rgba(0,170,255,0.1)" : "transparent", border: "1px solid " + (docTab === "sauvegardes" ? "#00aaff55" : "#00aaff15"), borderRadius: "5px", color: docTab === "sauvegardes" ? "#00aaff" : "#88bbaa", padding: "8px", cursor: "pointer", fontSize: "11px", fontWeight: "700", letterSpacing: "0.06em" }}>💾 SAUVEGARDES {savedDocs.length > 0 ? "(" + savedDocs.length + ")" : ""}</button>
